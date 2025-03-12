@@ -101,13 +101,14 @@ const Auth = () => {
             Continue with Google
           </Button>
           
+          {/* Yahoo isn't a valid provider in Supabase, but we can use a generic mail provider */}
           <Button 
             variant="outline" 
-            onClick={() => handleOAuthSignIn('yahoo')}
+            onClick={() => handleOAuthSignIn('azure')}
             className="w-full"
           >
             <Mail className="mr-2 h-4 w-4" />
-            Continue with Yahoo
+            Continue with Microsoft
           </Button>
         </div>
 
