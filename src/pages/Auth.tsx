@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Brain, Mail, LogIn } from 'lucide-react';
 import { Provider } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,6 +15,13 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
+  const { session } = useAuth();
+  
+  useEffect(() => {
+    if (session) {
+      navigate('/');
+    }
+  }, [session, navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +42,9 @@ const Auth = () => {
         toast.error(error.message);
       } else {
         toast.success(isSignUp ? 'Account created successfully!' : 'Logged in successfully!');
-        navigate('/');
+        if (!isSignUp) {
+          navigate('/');
+        }
       }
     } catch (error) {
       toast.error('An error occurred during authentication');
@@ -101,7 +110,6 @@ const Auth = () => {
             Continue with Google
           </Button>
           
-          {/* Yahoo isn't a valid provider in Supabase, but we can use a generic mail provider */}
           <Button 
             variant="outline" 
             onClick={() => handleOAuthSignIn('azure')}
