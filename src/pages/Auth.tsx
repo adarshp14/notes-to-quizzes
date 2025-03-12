@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -5,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Brain, Mail, LogIn } from 'lucide-react';
+import { Brain, Mail, LogIn, KeyRound, UserRound } from 'lucide-react';
 import { Provider } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
+import { motion } from 'framer-motion';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -71,13 +73,18 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30 p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-lg"
+      >
         <div className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4">
-            <Brain className="w-6 h-6" />
+          <div className="mx-auto w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+            <Brain className="w-7 h-7" />
           </div>
-          <h2 className="text-2xl font-bold">{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
           <p className="text-muted-foreground mt-2">
             {isSignUp ? 'Sign up to start creating quizzes' : 'Sign in to your account'}
           </p>
@@ -87,9 +94,9 @@ const Auth = () => {
           <Button 
             variant="outline" 
             onClick={() => handleOAuthSignIn('google')}
-            className="w-full"
+            className="w-full py-6 text-base font-medium transition-all hover:bg-muted/80 hover:scale-[1.01]"
           >
-            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+            <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -113,9 +120,9 @@ const Auth = () => {
           <Button 
             variant="outline" 
             onClick={() => handleOAuthSignIn('azure')}
-            className="w-full"
+            className="w-full py-6 text-base font-medium transition-all hover:bg-muted/80 hover:scale-[1.01]"
           >
-            <Mail className="mr-2 h-4 w-4" />
+            <Mail className="mr-2 h-5 w-5" />
             Continue with Microsoft
           </Button>
         </div>
@@ -125,7 +132,7 @@ const Auth = () => {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
+            <span className="bg-white px-2 text-muted-foreground">
               Or continue with
             </span>
           </div>
@@ -133,44 +140,56 @@ const Auth = () => {
 
         <form onSubmit={handleEmailAuth} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+            <div className="relative">
+              <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            <LogIn className="mr-2 h-4 w-4" />
+          <Button 
+            type="submit" 
+            className="w-full py-6 text-base transition-all hover:scale-[1.02]" 
+            disabled={isLoading}
+          >
+            <LogIn className="mr-2 h-5 w-5" />
             {isLoading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
           </Button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center pt-2">
           <button 
             onClick={() => setIsSignUp(!isSignUp)} 
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-primary hover:underline font-medium"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
