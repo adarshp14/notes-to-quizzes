@@ -1,13 +1,18 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from "@/lib/utils";
-import { FileText, Brain, Play } from 'lucide-react';
+import { FileText, Brain, Play, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Header = () => {
   const [scrollY, setScrollY] = useState(0);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { session } = useAuth();
   
   // Update scroll position
   useEffect(() => {
@@ -15,6 +20,16 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error('Error signing out');
+    } else {
+      toast.success('Signed out successfully');
+      navigate('/');
+    }
+  };
 
   // Navigation items
   const navItems = [
@@ -44,30 +59,48 @@ const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={cn(
-                  "px-4 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300",
-                  location.pathname === item.path 
-                    ? "bg-primary text-white" 
-                    : "hover:bg-black/5 text-foreground/80 hover:text-foreground"
-                )}
+            {session ? (
+              <>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className={cn(
+                      "px-4 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300",
+                      location.pathname === item.path 
+                        ? "bg-primary text-white" 
+                        : "hover:bg-black/5 text-foreground/80 hover:text-foreground"
+                    )}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </Link>
+                ))}
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 hover:bg-black/5 text-foreground/80 hover:text-foreground"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link 
+                to="/auth" 
+                className="px-4 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 hover:bg-black/5 text-foreground/80 hover:text-foreground"
               >
-                {item.icon}
-                {item.name}
+                Sign In
               </Link>
-            ))}
+            )}
           </nav>
 
           {/* CTA Button */}
           <Link 
-            to="/create" 
+            to={session ? "/create" : "/auth"} 
             className="button-shine bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 shadow-sm"
           >
             <Play className="w-4 h-4 mr-2" />
-            Start Quiz
+            {session ? 'Start Quiz' : 'Sign In'}
           </Link>
         </div>
       </div>
