@@ -1,9 +1,7 @@
-
-import React from 'react';
-import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, RefreshCw, Save, DownloadCloud } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, XCircle, RefreshCw, Save, DownloadCloud, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { Question, createQuiz, saveQuiz, generatePDF } from '@/utils/quizUtils';
 
@@ -16,16 +14,17 @@ interface QuizResultsProps {
 const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRestartQuiz }) => {
   // Calculate score
   const totalQuestions = questions.length;
-  const answeredQuestions = Object.values(userAnswers).filter(a => a !== null).length;
   const correctAnswers = questions.filter(q => {
     const userAnswer = userAnswers[q.id];
     const correctAnswer = q.answers.find(a => a.isCorrect);
     return userAnswer === correctAnswer?.id;
   }).length;
   
-  const scorePercentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  const scorePercentage = totalQuestions > 0 
+    ? Math.round((correctAnswers / totalQuestions) * 100) 
+    : 0;
   
-  // Get performance message based on score
+  // Performance message
   const getPerformanceMessage = () => {
     if (scorePercentage >= 90) return "Excellent job!";
     if (scorePercentage >= 70) return "Great work!";
@@ -43,6 +42,7 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
   // Download quiz results as PDF
   const handleDownloadPDF = () => {
     const quiz = createQuiz(`Quiz Results - ${new Date().toLocaleString()}`, questions);
+    // This calls your utility function (see sample code below)
     generatePDF(quiz);
   };
 
@@ -82,25 +82,76 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
         
         {/* Question breakdown */}
         <h4 className="font-medium mb-4">Question Breakdown</h4>
-        <div className="space-y-4 mb-6">
+        <div className="space-y-6 mb-6">
           {questions.map((question, index) => {
-            const userAnswer = userAnswers[question.id];
+            const userAnswerId = userAnswers[question.id];
+            const userAnswerObj = question.answers.find(a => a.id === userAnswerId);
             const correctAnswer = question.answers.find(a => a.isCorrect);
-            const isCorrect = userAnswer === correctAnswer?.id;
-            
+            const isCorrect = userAnswerId === correctAnswer?.id;
+
+            // Optional: "Show Explanation" toggle
+            const [showExplanation, setShowExplanation] = useState(false);
+
             return (
-              <div key={question.id} className="flex items-center">
-                <div className="mr-3">
-                  {isCorrect ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500" />
-                  )}
+              <div key={question.id} className="space-y-2 p-3 border rounded-lg">
+                {/* Row: correct or incorrect icon, question text */}
+                <div className="flex items-start">
+                  <div className="mr-3 pt-1">
+                    {isCorrect ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1">
+                      Question {index + 1}
+                    </div>
+                    <div className="text-sm text-foreground">{question.text}</div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium">Question {index + 1}</div>
-                  <div className="text-xs text-muted-foreground line-clamp-1">{question.text}</div>
+
+                {/* Row: your answer vs correct answer */}
+                <div className="pl-8 text-sm text-foreground/80">
+                  <p className="mt-1">
+                    <strong>Your Answer:</strong>{' '}
+                    {userAnswerObj ? userAnswerObj.text : 'No answer selected'}
+                  </p>
+                  <p>
+                    <strong>Correct Answer:</strong>{' '}
+                    {correctAnswer?.text}
+                  </p>
                 </div>
+
+                {/* Explanation toggle (only if explanation exists) */}
+                {question.explanation && (
+                  <div className="pl-8 pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                      onClick={() => setShowExplanation(!showExplanation)}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      <span>{showExplanation ? 'Hide Explanation' : 'Show Explanation'}</span>
+                    </Button>
+                    <AnimatePresence>
+                      {showExplanation && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-2 p-2 bg-muted/10 rounded"
+                        >
+                          <p className="text-sm text-muted-foreground">
+                            {question.explanation}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
             );
           })}

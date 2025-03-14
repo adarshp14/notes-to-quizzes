@@ -1,5 +1,6 @@
-
 import { toast } from 'sonner';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export type QuestionType = 'multiple-choice' | 'true-false';
 
@@ -199,10 +200,85 @@ export const getSavedQuizzes = (): Quiz[] => {
   }
 };
 
-// Generate a quiz PDF for download
-export const generatePDF = (quiz: Quiz): void => {
-  // In a real application, you would use a library like jsPDF to generate a PDF
-  // For this demo, we'll just log the quiz and show a toast
-  console.log('Generating PDF for quiz:', quiz);
-  toast.success('Quiz PDF generated successfully!');
+/**
+ * Generate a PDF for the quiz, including user answers.
+ *
+ * @param quiz The quiz object (title, questions, etc.)
+ * @param userAnswers A map of questionId -> userAnswerId
+ */
+export const generatePDF = (
+  quiz: Quiz,
+  userAnswers?: Record<string, string | null>
+): void => {
+  // If you do not pass userAnswers, we only list the correct answers & question text
+  // If userAnswers is present, we also show the user's chosen answer
+
+  try {
+    const doc = new jsPDF();
+
+    // Title at the top
+    doc.setFontSize(16);
+    doc.text(quiz.title || 'Quiz Results', 14, 20);
+
+    // Prepare table rows
+    const rows: any[] = [];
+
+    quiz.questions.forEach((q, index) => {
+      // Find the correct answer
+      const correctAnswer = q.answers.find(a => a.isCorrect);
+
+      // If userAnswers is provided, find the user's chosen answer
+      let userAnswerText = 'N/A';
+      if (userAnswers) {
+        const userAnswerId = userAnswers[q.id];
+        const userAnswerObj = q.answers.find(a => a.id === userAnswerId);
+        if (userAnswerObj) {
+          userAnswerText = userAnswerObj.text;
+        }
+      }
+
+      // Explanation
+      const explanation = q.explanation || '';
+
+      // We'll push a row containing question #, question text, user answer, correct answer, explanation
+      rows.push([
+        `Q${index + 1}`,
+        q.text,
+        userAnswerText,
+        correctAnswer ? correctAnswer.text : 'N/A',
+        explanation
+      ]);
+    });
+
+    // Use autoTable to generate a table
+    autoTable(doc, {
+      startY: 30,
+      head: [['#', 'Question', 'Your Answer', 'Correct Answer', 'Explanation']],
+      body: rows,
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+        halign: 'left',
+        valign: 'middle'
+      },
+      headStyles: {
+        fillColor: [220, 220, 220],
+        textColor: [0, 0, 0]
+      },
+      columnStyles: {
+        0: { cellWidth: 10 },   // Q#
+        1: { cellWidth: 60 },   // question text
+        2: { cellWidth: 50 },   // user answer
+        3: { cellWidth: 50 },   // correct answer
+        4: { cellWidth: 70, overflow: 'linebreak' },   // explanation
+      }
+    });
+
+    // Save (download) the PDF
+    doc.save('quiz_results.pdf');
+    toast.success('Quiz PDF generated and downloaded successfully!');
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    toast.error('Failed to generate PDF');
+  }
 };

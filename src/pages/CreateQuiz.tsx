@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -10,18 +9,30 @@ import { Question } from '@/utils/quizUtils';
 
 const CreateQuiz = () => {
   const navigate = useNavigate();
+
   const [notes, setNotes] = useState('');
+  // Tracks whether user selected "text" or "upload"
+  const [inputMethod, setInputMethod] = useState<'text' | 'upload'>('text');
+  // Tracks the file chosen in NoteInput
+  const [file, setFile] = useState<File | null>(null);
+
   const [settings, setSettings] = useState<QuizSettings>({
-    questionCount: 10,
+    questionCount: 5,
     answerOptions: 4,
     questionTypes: 'multiple-choice',
     difficulty: 'medium'
   });
+
   const [generatedQuestions, setGeneratedQuestions] = useState<Question[] | null>(null);
 
   // Handle notes changes
   const handleNotesChange = (newNotes: string) => {
     setNotes(newNotes);
+  };
+
+  // Handle file changes
+  const handleFileChange = (newFile: File | null) => {
+    setFile(newFile);
   };
 
   // Handle settings changes
@@ -64,7 +75,12 @@ const CreateQuiz = () => {
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
             >
               <h2 className="text-xl font-semibold mb-4">Enter Your Notes</h2>
-              <NoteInput onNotesChange={handleNotesChange} />
+              <NoteInput
+                onNotesChange={handleNotesChange}
+                onFileChange={handleFileChange}
+                inputMethod={inputMethod}
+                onInputMethodChange={setInputMethod}
+              />
             </motion.div>
             
             <motion.div
@@ -76,8 +92,10 @@ const CreateQuiz = () => {
               <h2 className="text-xl font-semibold mb-4">Generate Quiz</h2>
               <QuizGenerator 
                 notes={notes} 
+                file={file}
                 settings={settings} 
                 onQuizGenerated={handleQuizGenerated} 
+                inputMethod={inputMethod}
               />
             </motion.div>
           </div>

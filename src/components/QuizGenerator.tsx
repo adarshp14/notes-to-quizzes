@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,63 +9,94 @@ import {
   Question, 
   createQuiz, 
   saveQuiz, 
-  generatePDF,
-  convertApiResponsesToQuestions
+  generatePDF
 } from '@/utils/quizUtils';
 import { QuizSettings } from './QuizCustomizer';
-import { supabase } from '@/integrations/supabase/client';
 
 interface QuizGeneratorProps {
   notes: string;
+  file: File | null;   // The file selected in NoteInput (or null if none)
   settings: QuizSettings;
   onQuizGenerated: (questions: Question[]) => void;
+  inputMethod: 'text' | 'upload';
 }
 
-const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGenerated }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+interface ApiQuestion {
+  question: string;
+  options: string[];
+  correct_answer: string;
+  explanation: string;
+  question_type: string;
+}
 
-  // Generate the quiz from text notes
-  const handleGenerateQuiz = async () => {
+const QuizGenerator: React.FC<QuizGeneratorProps> = ({
+  notes,
+  file,
+  settings,
+  onQuizGenerated,
+  inputMethod
+}) => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
+
+  // Convert API response to local question shape
+  const convertApiResponseToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
+    return apiQuestions.map((q, index) => ({
+      id: `${index + 1}`,
+      text: q.question,
+      type: q.question_type === 'multiple_choice' ? 'multiple-choice' : 'true-false',
+      answers: q.options.map((option, optIndex) => ({
+        id: `${index + 1}-${optIndex}`,
+        text: option,
+        isCorrect: option === q.correct_answer
+      })),
+      explanation: q.explanation
+    }));
+  };
+
+  // -----------------------------
+  // Generate from typed notes
+  // -----------------------------
+  const handleGenerateFromNotes = async () => {
     if (!notes.trim()) {
-      toast.error('Please enter some notes first');
+      toast.error('Please enter some notes first.');
       return;
     }
-
     setIsGenerating(true);
     setCurrentQuiz(null);
 
     try {
-      // Call the Supabase function for text quiz generation
-      const response = await supabase.functions.invoke('generate-file-quiz', {
-        body: {
+      const response = await fetch('http://localhost:8000/generate-text-quiz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           text: notes,
           num_questions: settings.questionCount,
           num_options: settings.answerOptions,
           question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
           difficulty: settings.difficulty
-        },
+        }),
       });
 
-      if (response.error) {
-        throw new Error(`API error: ${response.error.message}`);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
       }
 
-      if (response.data?.questions) {
-        // Convert API response format to our app's Question format
-        const questions = convertApiResponsesToQuestions(response.data.questions);
+      const data = await response.json();
+      if (data.questions && Array.isArray(data.questions)) {
+        const questions = convertApiResponseToQuestions(data.questions);
         setCurrentQuiz(questions);
         onQuizGenerated(questions);
-        toast.success(`Generated ${questions.length} questions successfully!`);
+        toast.success(`Generated ${questions.length} questions from your notes!`);
       } else {
         throw new Error('Invalid response from quiz generation API');
       }
     } catch (error) {
-      console.error('Error generating quiz:', error);
-      
-      // Fallback to demo questions if there's an error
+      console.error('Error generating quiz from notes:', error);
+      // fallback to demo
       const demoQuestions = await generateDemoQuestions(
         notes,
         settings.questionCount,
@@ -82,54 +112,81 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
     }
   };
 
-  // Generate quiz from file upload
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // -----------------------------
+  // Generate from uploaded file
+  // -----------------------------
+  const handleGenerateFromFile = async () => {
+    if (!file) {
+      toast.error('No file selected.');
+      return;
+    }
 
-    setIsUploading(true);
     setIsGenerating(true);
+    setIsUploading(true);
     setCurrentQuiz(null);
 
     try {
-      // Create FormData to send the file
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('num_questions', settings.questionCount.toString());
-      formData.append('num_options', settings.answerOptions.toString());
-      formData.append('question_type', settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false');
-      formData.append('difficulty', settings.difficulty);
+      if (file.type === 'text/plain') {
+        // If it's plain text, read its contents & call /generate-text-quiz
+        const textContent = await file.text();
+        const response = await fetch('http://localhost:8000/generate-text-quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: textContent,
+            num_questions: settings.questionCount,
+            num_options: settings.answerOptions,
+            question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+            difficulty: settings.difficulty
+          }),
+        });
 
-      // Call the Supabase function with the file
-      const response = await supabase.functions.invoke('generate-file-quiz', {
-        body: {
-          filename: file.name,
-          filetype: file.type,
-          num_questions: settings.questionCount,
-          num_options: settings.answerOptions,
-          question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
-          difficulty: settings.difficulty
-        },
-      });
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
 
-      if (response.error) {
-        throw new Error(`API error: ${response.error.message}`);
-      }
-
-      if (response.data?.questions) {
-        // Convert API response format to our app's Question format
-        const questions = convertApiResponsesToQuestions(response.data.questions);
-        setCurrentQuiz(questions);
-        onQuizGenerated(questions);
-        toast.success(`Generated ${questions.length} questions from your file!`);
+        const data = await response.json();
+        if (data.questions) {
+          const questions = convertApiResponseToQuestions(data.questions);
+          setCurrentQuiz(questions);
+          onQuizGenerated(questions);
+          toast.success(`Generated ${questions.length} questions from your text file!`);
+        } else {
+          throw new Error('Invalid response from quiz generation API');
+        }
       } else {
-        throw new Error('Invalid response from file quiz generation API');
+        // Otherwise, call /generate-file-quiz with FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('num_questions', settings.questionCount.toString());
+        formData.append('num_options', settings.answerOptions.toString());
+        formData.append('question_type', 'multiple_choice'); // or derive from settings if you like
+        formData.append('difficulty', 'easy');              // or derive from settings if you like
+
+        const response = await fetch('http://localhost:8000/generate-file-quiz', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.questions) {
+          const questions = convertApiResponseToQuestions(data.questions);
+          setCurrentQuiz(questions);
+          onQuizGenerated(questions);
+          toast.success(`Generated ${questions.length} questions from your file!`);
+        } else {
+          throw new Error('Invalid response from quiz generation API');
+        }
       }
     } catch (error) {
       console.error('Error generating quiz from file:', error);
-      // Fallback to demo questions
+      // fallback to demo
       const demoQuestions = await generateDemoQuestions(
-        file.name, // Using filename as "notes" for the demo generation
+        file.name,
         settings.questionCount,
         settings.answerOptions,
         settings.questionTypes,
@@ -141,19 +198,10 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
     } finally {
       setIsUploading(false);
       setIsGenerating(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
-  // Trigger file input click
-  const handleFileButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Save the current quiz
+  // Save quiz to DB
   const handleSaveQuiz = () => {
     if (currentQuiz) {
       const quiz = createQuiz('Quiz - ' + new Date().toLocaleString(), currentQuiz);
@@ -161,7 +209,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
     }
   };
 
-  // Download the quiz as PDF
+  // Download quiz as PDF
   const handleDownloadPDF = () => {
     if (currentQuiz) {
       const quiz = createQuiz('Quiz - ' + new Date().toLocaleString(), currentQuiz);
@@ -172,9 +220,14 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
-        <Button 
-          onClick={handleGenerateQuiz} 
-          disabled={isGenerating || !notes.trim()} 
+        {/* Generate from Notes Button */}
+        <Button
+          onClick={handleGenerateFromNotes}
+          disabled={
+            isGenerating ||
+            inputMethod !== 'text' ||   // only enable in text mode
+            !notes.trim()
+          }
           className="flex-1"
         >
           {isGenerating && !isUploading ? (
@@ -190,33 +243,29 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
           )}
         </Button>
 
-        <div className="relative flex-1">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/*,.pdf,.doc,.docx"
-          />
-          <Button 
-            onClick={handleFileButtonClick}
-            disabled={isGenerating}
-            className="w-full"
-            variant="outline"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5 mr-2" />
-                Generate from File
-              </>
-            )}
-          </Button>
-        </div>
+        {/* Generate from File Button */}
+        <Button
+          onClick={handleGenerateFromFile}
+          disabled={
+            isGenerating ||
+            inputMethod !== 'upload' || // only enable in upload mode
+            !file
+          }
+          className="flex-1"
+          variant="outline"
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Upload className="w-5 h-5 mr-2" />
+              Generate from File
+            </>
+          )}
+        </Button>
       </div>
 
       {isGenerating && (
@@ -241,23 +290,23 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
       )}
 
       {currentQuiz && !isGenerating && (
-        <motion.div 
+        <motion.div
           className="space-y-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         >
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               onClick={handleSaveQuiz}
             >
               <Save className="w-4 h-4 mr-2" />
               Save Quiz
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               onClick={handleDownloadPDF}
             >
