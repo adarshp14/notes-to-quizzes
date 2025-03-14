@@ -39,21 +39,39 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
     setCurrentQuiz(null);
 
     try {
-      // In a real app, this would call an API with the OpenAI integration
-      const questions = await generateDemoQuestions(
-        notes,
-        settings.questionCount,
-        settings.answerOptions,
-        settings.questionTypes,
-        settings.difficulty
-      );
+      // Call the local text quiz generation API
+      const response = await fetch('http://localhost:8000/generate-text-quiz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: notes,
+          num_questions: settings.questionCount,
+          num_options: settings.answerOptions,
+          question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+          difficulty: settings.difficulty
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      setCurrentQuiz(questions);
-      onQuizGenerated(questions);
-      toast.success(`Generated ${questions.length} questions successfully!`);
+      if (data?.questions) {
+        // Convert API response format to our app's Question format
+        const questions = convertApiResponsesToQuestions(data.questions);
+        setCurrentQuiz(questions);
+        onQuizGenerated(questions);
+        toast.success(`Generated ${questions.length} questions successfully!`);
+      } else {
+        throw new Error('Invalid response from quiz generation API');
+      }
     } catch (error) {
       console.error('Error generating quiz:', error);
-      toast.error('Failed to generate quiz');
+      toast.error('Failed to generate quiz: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsGenerating(false);
     }
@@ -76,14 +94,17 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
       formData.append('question_type', settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false');
       formData.append('difficulty', settings.difficulty);
 
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('generate-file-quiz', {
+      // Call the local file quiz generation API
+      const response = await fetch('http://localhost:8000/generate-file-quiz', {
+        method: 'POST',
         body: formData,
       });
 
-      if (error) {
-        throw new Error(error.message);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
+
+      const data = await response.json();
 
       if (data?.questions) {
         // Convert API response format to our app's Question format
