@@ -6,6 +6,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   // Load environment variables for the current mode
   const env = loadEnv(mode, process.cwd(), '');
+  console.log("Loaded API URL:", env.VITE_API_URL);
   
   return {
     server: {
@@ -16,6 +17,7 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_URL, // e.g. http://localhost:8000 or production URL
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
+
         },
       },
     },
