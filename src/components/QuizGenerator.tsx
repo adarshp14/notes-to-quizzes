@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Brain, Loader2, DownloadCloud, Save } from 'lucide-react';
+import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -10,9 +10,11 @@ import {
   Question, 
   createQuiz, 
   saveQuiz, 
-  generatePDF 
+  generatePDF,
+  convertApiResponsesToQuestions
 } from '@/utils/quizUtils';
 import { QuizSettings } from './QuizCustomizer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuizGeneratorProps {
   notes: string;
@@ -23,8 +25,10 @@ interface QuizGeneratorProps {
 const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGenerated }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Generate the quiz
+  // Generate the quiz from text notes
   const handleGenerateQuiz = async () => {
     if (!notes.trim()) {
       toast.error('Please enter some notes first');
@@ -55,6 +59,61 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
     }
   };
 
+  // Generate quiz from file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setIsGenerating(true);
+    setCurrentQuiz(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('num_questions', settings.questionCount.toString());
+      formData.append('num_options', settings.answerOptions.toString());
+      formData.append('question_type', settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false');
+      formData.append('difficulty', settings.difficulty);
+
+      const { data: { host } } = await supabase.functions.invoke('generate-file-quiz', {
+        body: formData,
+      });
+
+      // If using a public function URL instead of invoke:
+      // const response = await fetch('your-supabase-function-url/generate-file-quiz', {
+      //   method: 'POST',
+      //   body: formData,
+      // });
+      // const data = await response.json();
+
+      if (host?.questions) {
+        // Convert API response format to our app's Question format
+        const questions = convertApiResponsesToQuestions(host.questions);
+        setCurrentQuiz(questions);
+        onQuizGenerated(questions);
+        toast.success(`Generated ${questions.length} questions from your file!`);
+      } else {
+        throw new Error('Invalid response from quiz generation API');
+      }
+    } catch (error) {
+      console.error('Error generating quiz from file:', error);
+      toast.error('Failed to generate quiz from file');
+    } finally {
+      setIsUploading(false);
+      setIsGenerating(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Trigger file input click
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
   // Save the current quiz
   const handleSaveQuiz = () => {
     if (currentQuiz) {
@@ -73,24 +132,53 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
 
   return (
     <div className="space-y-6">
-      <Button 
-        onClick={handleGenerateQuiz} 
-        disabled={isGenerating || !notes.trim()} 
-        size="lg"
-        className="w-full"
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Generating Quiz...
-          </>
-        ) : (
-          <>
-            <Brain className="w-5 h-5 mr-2" />
-            Generate Quiz
-          </>
-        )}
-      </Button>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Button 
+          onClick={handleGenerateQuiz} 
+          disabled={isGenerating || !notes.trim()} 
+          className="flex-1"
+        >
+          {isGenerating && !isUploading ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Generating Quiz...
+            </>
+          ) : (
+            <>
+              <Brain className="w-5 h-5 mr-2" />
+              Generate from Notes
+            </>
+          )}
+        </Button>
+
+        <div className="relative flex-1">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+            accept="image/*,.pdf,.doc,.docx"
+          />
+          <Button 
+            onClick={handleFileButtonClick}
+            disabled={isGenerating}
+            className="w-full"
+            variant="outline"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 mr-2" />
+                Generate from File
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
       {isGenerating && (
         <Card className="overflow-hidden">

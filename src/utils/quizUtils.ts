@@ -24,9 +24,39 @@ export interface Quiz {
   createdAt: Date;
 }
 
+interface ApiQuestion {
+  question: string;
+  options: string[];
+  correct_answer: string;
+  explanation: string;
+  question_type: string;
+}
+
 // Helper to create an ID
 export const generateId = () => {
   return Math.random().toString(36).substring(2, 9);
+};
+
+// Convert API response format to our application's Question format
+export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
+  return apiQuestions.map(apiQ => {
+    const questionType: QuestionType = apiQ.question_type === 'true_false' ? 'true-false' : 'multiple-choice';
+    
+    // Create answers array from options
+    const answers: Answer[] = apiQ.options.map(option => ({
+      id: generateId(),
+      text: option,
+      isCorrect: option === apiQ.correct_answer
+    }));
+
+    return {
+      id: generateId(),
+      text: apiQ.question,
+      type: questionType,
+      answers,
+      explanation: apiQ.explanation
+    };
+  });
 };
 
 // Generate random questions for demo purposes
