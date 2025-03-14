@@ -76,20 +76,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
       formData.append('question_type', settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false');
       formData.append('difficulty', settings.difficulty);
 
-      const { data: { host } } = await supabase.functions.invoke('generate-file-quiz', {
+      // Call the Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('generate-file-quiz', {
         body: formData,
       });
 
-      // If using a public function URL instead of invoke:
-      // const response = await fetch('your-supabase-function-url/generate-file-quiz', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // const data = await response.json();
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      if (host?.questions) {
+      if (data?.questions) {
         // Convert API response format to our app's Question format
-        const questions = convertApiResponsesToQuestions(host.questions);
+        const questions = convertApiResponsesToQuestions(data.questions);
         setCurrentQuiz(questions);
         onQuizGenerated(questions);
         toast.success(`Generated ${questions.length} questions from your file!`);
@@ -98,7 +96,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
       }
     } catch (error) {
       console.error('Error generating quiz from file:', error);
-      toast.error('Failed to generate quiz from file');
+      toast.error('Failed to generate quiz from file: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsUploading(false);
       setIsGenerating(false);

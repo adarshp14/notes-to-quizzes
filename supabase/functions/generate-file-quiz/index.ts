@@ -32,6 +32,9 @@ serve(async (req) => {
       );
     }
 
+    console.log("File received:", file.name, "Size:", file.size);
+    console.log("Settings:", { numQuestions, numOptions, questionType, difficulty });
+
     // For now, we'll simulate the API response with a mocked response
     // In a real implementation, you would send this to another service or process it here
 
