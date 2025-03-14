@@ -43,7 +43,7 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
   const handleDownloadPDF = () => {
     const quiz = createQuiz(`Quiz Results - ${new Date().toLocaleString()}`, questions);
     // This calls your utility function (see sample code below)
-    generatePDF(quiz);
+    generatePDF(quiz,userAnswers);
   };
 
   return (

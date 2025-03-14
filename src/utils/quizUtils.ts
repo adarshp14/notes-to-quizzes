@@ -41,8 +41,9 @@ export const generateId = () => {
 // Convert API response format to our application's Question format
 export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
   return apiQuestions.map(apiQ => {
-    const questionType: QuestionType = apiQ.question_type === 'true_false' ? 'true-false' : 'multiple-choice';
-    
+    const questionType: QuestionType =
+      apiQ.question_type === 'true_false' ? 'true-false' : 'multiple-choice';
+
     // Create answers array from options
     const answers: Answer[] = apiQ.options.map(option => ({
       id: generateId(),
@@ -68,38 +69,38 @@ export const generateDemoQuestions = (
   questionTypes: 'multiple-choice' | 'true-false' | 'mixed',
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question[]> => {
-  return new Promise((resolve) => {
-    // This is a demo implementation - in a real app, you would use an API like OpenAI
-    // to generate questions from the notes
+  return new Promise(resolve => {
+    // This is a demo implementation - in a real app, you would use an API
+    // like OpenAI to generate questions from the notes
 
     // Simulate API call delay
     setTimeout(() => {
       // Generate demo questions
       const questions: Question[] = [];
-      
+
       const notesWords = notes.split(/\s+/).filter(word => word.length > 4);
       const uniqueWords = [...new Set(notesWords)];
-      
+
       // Simple demo topics extraction
       const topics = uniqueWords
         .slice(0, Math.min(count * 2, uniqueWords.length))
         .filter(() => Math.random() > 0.3) // Randomly filter some words
         .map(word => word.replace(/[^a-zA-Z]/g, '')) // Clean up words
         .filter(word => word.length > 3); // Only keep substantial words
-      
+
       for (let i = 0; i < count; i++) {
         // Determine if this question should be multiple choice or true/false
         let type: QuestionType = 'multiple-choice';
-        
+
         if (questionTypes === 'true-false') {
           type = 'true-false';
         } else if (questionTypes === 'mixed') {
           type = Math.random() > 0.5 ? 'multiple-choice' : 'true-false';
         }
-        
+
         // Generate question
         const topic = topics[i % topics.length] || 'concept';
-        
+
         // Create question text based on difficulty
         let questionText = '';
         if (difficulty === 'easy') {
@@ -109,21 +110,21 @@ export const generateDemoQuestions = (
         } else {
           questionText = `Analyze the significance of ${topic} in the context of the broader subject matter.`;
         }
-        
+
         // Create answers
         const answers: Answer[] = [];
-        
+
         if (type === 'multiple-choice') {
           // Number of options for multiple choice
           const options = answerOptions;
-          
+
           // Generate correct answer
           answers.push({
             id: generateId(),
             text: `This is the correct definition of ${topic}`,
             isCorrect: true
           });
-          
+
           // Generate distractors
           for (let j = 1; j < options; j++) {
             answers.push({
@@ -132,26 +133,26 @@ export const generateDemoQuestions = (
               isCorrect: false
             });
           }
-          
+
           // Shuffle answers
           answers.sort(() => Math.random() - 0.5);
         } else {
           // True/False question
           const correctAnswer = Math.random() > 0.5;
-          
+
           answers.push({
             id: generateId(),
             text: 'True',
             isCorrect: correctAnswer
           });
-          
+
           answers.push({
             id: generateId(),
             text: 'False',
             isCorrect: !correctAnswer
           });
         }
-        
+
         questions.push({
           id: generateId(),
           text: questionText,
@@ -160,7 +161,7 @@ export const generateDemoQuestions = (
           explanation: `This explanation provides context about ${topic} and why the correct answer is correct.`
         });
       }
-      
+
       resolve(questions);
     }, 2000); // Simulate API delay of 2 seconds
   });
@@ -214,7 +215,12 @@ export const generatePDF = (
   // If userAnswers is present, we also show the user's chosen answer
 
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+      // You can specify page size or orientation if needed:
+      // orientation: 'portrait',
+      // unit: 'pt',
+      // format: 'a4',
+    });
 
     // Title at the top
     doc.setFontSize(16);
@@ -255,23 +261,35 @@ export const generatePDF = (
       startY: 30,
       head: [['#', 'Question', 'Your Answer', 'Correct Answer', 'Explanation']],
       body: rows,
+
+      // Global styles so text wraps by default
       styles: {
-        fontSize: 10,
+        fontSize: 9,
         cellPadding: 3,
-        halign: 'left',
-        valign: 'middle'
+        valign: 'top',
+        overflow: 'linebreak', // ensures text wraps instead of cutting off
       },
-      headStyles: {
-        fillColor: [220, 220, 220],
-        textColor: [0, 0, 0]
-      },
+
+      // Per-column styles
       columnStyles: {
-        0: { cellWidth: 10 },   // Q#
-        1: { cellWidth: 60 },   // question text
-        2: { cellWidth: 50 },   // user answer
-        3: { cellWidth: 50 },   // correct answer
-        4: { cellWidth: 70, overflow: 'linebreak' },   // explanation
-      }
+        0: { cellWidth: 10 }, // # column
+        1: { cellWidth: 50 }, // Question
+        2: { cellWidth: 40 }, // Your Answer
+        3: { cellWidth: 40 }, // Correct Answer
+        4: {
+          cellWidth: 60,
+          overflow: 'linebreak',
+        },
+      },
+
+      // Margins so the table isn't pressed against the edges
+      margin: { left: 10, right: 10 },
+
+      // Let autoTable wrap columns instead of pushing them off-page
+      tableWidth: 'wrap',
+
+      // Page-break automatically if the table is too tall
+      pageBreak: 'auto',
     });
 
     // Save (download) the PDF
