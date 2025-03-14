@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,13 +60,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
         setCurrentQuiz(questions);
         onQuizGenerated(questions);
         toast.success(`Generated ${questions.length} questions successfully!`);
-      } else if (response.data?.message) {
-        // Generate demo questions instead when the function is deprecated
-        console.log("Using demo questions as the edge function is deprecated:", response.data.message);
-        const demoQuestions = generateDemoQuestions(settings.questionCount);
-        setCurrentQuiz(demoQuestions);
-        onQuizGenerated(demoQuestions);
-        toast.success(`Generated ${demoQuestions.length} demo questions!`);
       } else {
         throw new Error('Invalid response from quiz generation API');
       }
@@ -73,7 +67,13 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
       console.error('Error generating quiz:', error);
       
       // Fallback to demo questions if there's an error
-      const demoQuestions = generateDemoQuestions(settings.questionCount);
+      const demoQuestions = await generateDemoQuestions(
+        notes,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
       setCurrentQuiz(demoQuestions);
       onQuizGenerated(demoQuestions);
       toast.warning(`Couldn't connect to the API. Generated demo questions instead.`);
@@ -92,27 +92,53 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ notes, settings, onQuizGe
     setCurrentQuiz(null);
 
     try {
-      // Use demo questions instead of making an API call
-      // This avoids CORS issues with local development servers
-      setTimeout(() => {
-        const demoQuestions = generateDemoQuestions(settings.questionCount);
-        setCurrentQuiz(demoQuestions);
-        onQuizGenerated(demoQuestions);
-        toast.success(`Generated ${demoQuestions.length} demo questions from your file!`);
-        setIsUploading(false);
-        setIsGenerating(false);
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      }, 1500); // Add a small delay to simulate processing
+      // Create FormData to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('num_questions', settings.questionCount.toString());
+      formData.append('num_options', settings.answerOptions.toString());
+      formData.append('question_type', settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false');
+      formData.append('difficulty', settings.difficulty);
+
+      // Call the Supabase function with the file
+      const response = await supabase.functions.invoke('generate-file-quiz', {
+        body: {
+          filename: file.name,
+          filetype: file.type,
+          num_questions: settings.questionCount,
+          num_options: settings.answerOptions,
+          question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+          difficulty: settings.difficulty
+        },
+      });
+
+      if (response.error) {
+        throw new Error(`API error: ${response.error.message}`);
+      }
+
+      if (response.data?.questions) {
+        // Convert API response format to our app's Question format
+        const questions = convertApiResponsesToQuestions(response.data.questions);
+        setCurrentQuiz(questions);
+        onQuizGenerated(questions);
+        toast.success(`Generated ${questions.length} questions from your file!`);
+      } else {
+        throw new Error('Invalid response from file quiz generation API');
+      }
     } catch (error) {
       console.error('Error generating quiz from file:', error);
       // Fallback to demo questions
-      const demoQuestions = generateDemoQuestions(settings.questionCount);
+      const demoQuestions = await generateDemoQuestions(
+        file.name, // Using filename as "notes" for the demo generation
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
       setCurrentQuiz(demoQuestions);
       onQuizGenerated(demoQuestions);
       toast.warning(`Couldn't process the file. Generated demo questions instead.`);
+    } finally {
       setIsUploading(false);
       setIsGenerating(false);
       // Reset file input
