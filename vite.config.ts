@@ -3,9 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Load environment variables based on the current mode
+  // Load environment variables for the current mode
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
@@ -14,10 +13,8 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       proxy: {
         '/api': {
-          // Ensure that VITE_API_URL is defined in your .env file (e.g. .env.development)
-          target: env.VITE_API_URL,
+          target: env.VITE_API_URL, // e.g. http://localhost:8000 or production URL
           changeOrigin: true,
-          // Remove the /api prefix when forwarding the request
           rewrite: (path) => path.replace(/^\/api/, '')
         },
       },
