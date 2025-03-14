@@ -67,7 +67,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
-      const response = await fetch('http://localhost:8000/generate-text-quiz', {
+      const response = await fetch('/api/generate-text-quiz', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       if (file.type === 'text/plain') {
         // If it's plain text, read its contents & call /generate-text-quiz
         const textContent = await file.text();
-        const response = await fetch('http://localhost:8000/generate-text-quiz', {
+        const response = await fetch('/api/generate-text-quiz', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -163,7 +163,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         formData.append('question_type', 'multiple_choice'); // or derive from settings if you like
         formData.append('difficulty', 'easy');              // or derive from settings if you like
 
-        const response = await fetch('http://localhost:8000/generate-file-quiz', {
+        const response = await fetch('/api/generate-file-quiz', {
           method: 'POST',
           body: formData,
         });

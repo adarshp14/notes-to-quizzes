@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -46,7 +45,7 @@ const Header = () => {
     return email.substring(0, 1).toUpperCase();
   };
 
-  // Navigation items
+  // Navigation items (only used when user is signed in)
   const navItems = [
     { name: 'Create', path: '/create', icon: <FileText className="w-4 h-4 mr-2" /> },
     { name: 'My Quizzes', path: '/quizzes', icon: <Brain className="w-4 h-4 mr-2" /> },
@@ -72,9 +71,9 @@ const Header = () => {
             <span className="font-bold text-xl tracking-tight">QuizCraft</span>
           </Link>
 
-          {/* Navigation */}
+          {/* Navigation (only render nav items if session exists) */}
           <nav className="hidden md:flex items-center space-x-1">
-            {session ? (
+            {session && (
               <>
                 {navItems.map((item) => (
                   <Link
@@ -92,14 +91,6 @@ const Header = () => {
                   </Link>
                 ))}
               </>
-            ) : (
-              <Link 
-                to="/auth" 
-                className="px-4 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 hover:bg-black/5 text-foreground/80 hover:text-foreground"
-              >
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In
-              </Link>
             )}
           </nav>
 
@@ -139,6 +130,7 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
+            // This large blue button remains when no session is present
             <Link 
               to="/auth" 
               className="button-shine bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 shadow-sm"
