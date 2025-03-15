@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,7 @@ import {
   Question, 
   createQuiz, 
   saveQuiz, 
-  generatePDF,
-  convertApiResponsesToQuestions
+  generatePDF
 } from '@/utils/quizUtils';
 import { QuizSettings } from './QuizCustomizer';
 
@@ -24,7 +24,7 @@ interface QuizGeneratorProps {
 
 interface ApiQuestion {
   question: string;
-  options: string[] | null;
+  options: string[];
   correct_answer: string;
   explanation: string;
   question_type: string;
@@ -41,6 +41,43 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
   const baseUrl = import.meta.env.VITE_API_URL;
+
+  // Convert API response to local question shape
+  const convertApiResponseToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
+    return apiQuestions.map((q, index) => {
+      // Map the API question type to our application's question type
+      let questionType: 'multiple-choice' | 'true-false' | 'fill-in-the-blank' | 'short-answer' | 'matching';
+      
+      switch (q.question_type) {
+        case 'true_false':
+          questionType = 'true-false';
+          break;
+        case 'fill_in_the_blank':
+          questionType = 'fill-in-the-blank';
+          break;
+        case 'short_answer':
+          questionType = 'short-answer';
+          break;
+        case 'matching':
+          questionType = 'matching';
+          break;
+        default:
+          questionType = 'multiple-choice';
+      }
+      
+      return {
+        id: `${index + 1}`,
+        text: q.question,
+        type: questionType,
+        answers: q.options.map((option, optIndex) => ({
+          id: `${index + 1}-${optIndex}`,
+          text: option,
+          isCorrect: option === q.correct_answer
+        })),
+        explanation: q.explanation
+      }
+    });
+  };
 
   // -----------------------------
   // Generate from typed notes
@@ -90,7 +127,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
       const data = await response.json();
       if (data.questions && Array.isArray(data.questions)) {
-        const questions = convertApiResponsesToQuestions(data.questions);
+        const questions = convertApiResponseToQuestions(data.questions);
         setCurrentQuiz(questions);
         onQuizGenerated(questions);
         toast.success(`Generated ${questions.length} questions from your notes!`);
@@ -166,7 +203,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
         const data = await response.json();
         if (data.questions) {
-          const questions = convertApiResponsesToQuestions(data.questions);
+          const questions = convertApiResponseToQuestions(data.questions);
           setCurrentQuiz(questions);
           onQuizGenerated(questions);
           toast.success(`Generated ${questions.length} questions from your text file!`);
@@ -193,7 +230,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
         const data = await response.json();
         if (data.questions) {
-          const questions = convertApiResponsesToQuestions(data.questions);
+          const questions = convertApiResponseToQuestions(data.questions);
           setCurrentQuiz(questions);
           onQuizGenerated(questions);
           toast.success(`Generated ${questions.length} questions from your file!`);
