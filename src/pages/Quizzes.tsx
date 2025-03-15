@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Clock, Calendar, Play, Trash2, Eye } from 'lucide-react';
+import { Brain, Clock, Calendar, Play, Trash2, Eye, CheckCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { getSavedQuizzes, Quiz } from '@/utils/quizUtils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 const Quizzes = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ const Quizzes = () => {
         <div className="space-y-6">
           {/* Create new quiz button */}
           <div className="flex justify-end">
-            <Button onClick={handleCreateNew}>
+            <Button onClick={handleCreateNew} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
               <Brain className="w-4 h-4 mr-2" />
               Create New Quiz
             </Button>
@@ -142,8 +143,8 @@ const Quizzes = () => {
                   >
                     <div className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Brain className="w-5 h-5 text-primary" />
+                        <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                          <Brain className="w-5 h-5 text-indigo-600" />
                         </div>
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Calendar className="w-4 h-4 mr-1" />
@@ -166,7 +167,7 @@ const Quizzes = () => {
                       
                       <div className="flex space-x-2">
                         <Button 
-                          className="flex-1"
+                          className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                           onClick={() => handleTakeQuiz(quiz)}
                         >
                           <Play className="w-4 h-4 mr-2" />
@@ -175,20 +176,20 @@ const Quizzes = () => {
                         
                         <Button 
                           variant="outline" 
-                          className="px-3"
+                          className="px-3 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                           onClick={() => handleViewQuiz(quiz)}
                         >
-                          <Eye className="w-4 h-4 text-muted-foreground" />
+                          <Eye className="w-4 h-4 text-indigo-600" />
                         </Button>
                         
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
                               variant="outline" 
-                              className="px-3"
+                              className="px-3 border-red-200 hover:bg-red-50 hover:text-red-700"
                               onClick={() => setSelectedQuizId(quiz.id)}
                             >
-                              <Trash2 className="w-4 h-4 text-muted-foreground" />
+                              <Trash2 className="w-4 h-4 text-red-500" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
@@ -221,7 +222,7 @@ const Quizzes = () => {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-auto">
             <DialogHeader>
-              <DialogTitle>{viewQuiz?.title}</DialogTitle>
+              <DialogTitle className="text-xl font-bold">{viewQuiz?.title}</DialogTitle>
               <DialogDescription>
                 Created on {viewQuiz && formatDate(viewQuiz.createdAt)}
               </DialogDescription>
@@ -229,43 +230,61 @@ const Quizzes = () => {
             
             {viewQuiz && (
               <div className="mt-4 space-y-6">
-                <h3 className="text-lg font-medium">Questions</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Question</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Correct Answer</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {viewQuiz.questions.map((question, index) => {
-                      const correctAnswer = question.answers.find(a => a.isCorrect);
-                      
-                      return (
-                        <TableRow key={question.id}>
-                          <TableCell className="font-medium">{index + 1}</TableCell>
-                          <TableCell>{question.text}</TableCell>
-                          <TableCell className="capitalize">
-                            {question.type.replace('-', ' ')}
-                          </TableCell>
-                          <TableCell>{correctAnswer?.text || 'N/A'}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <h3 className="text-lg font-medium flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2 text-indigo-600" />
+                  Questions
+                </h3>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-indigo-50">
+                      <TableRow>
+                        <TableHead className="w-12 font-bold text-indigo-900">#</TableHead>
+                        <TableHead className="font-bold text-indigo-900">Question</TableHead>
+                        <TableHead className="font-bold text-indigo-900">Type</TableHead>
+                        <TableHead className="font-bold text-indigo-900">Correct Answer</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {viewQuiz.questions.map((question, index) => {
+                        const correctAnswer = question.answers.find(a => a.isCorrect);
+                        
+                        return (
+                          <TableRow key={question.id} className="hover:bg-indigo-50/50">
+                            <TableCell className="font-medium text-indigo-700">{index + 1}</TableCell>
+                            <TableCell>{question.text}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-indigo-200">
+                                {question.type.replace('-', ' ')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium text-green-600">
+                              {correctAnswer?.text || 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
             
-            <DialogFooter>
-              <Button onClick={() => setDialogOpen(false)}>Close</Button>
+            <DialogFooter className="mt-6 gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setDialogOpen(false)}
+                className="border-gray-200"
+              >
+                Close
+              </Button>
               {viewQuiz && (
-                <Button onClick={() => {
-                  setDialogOpen(false);
-                  handleTakeQuiz(viewQuiz);
-                }}>
+                <Button 
+                  onClick={() => {
+                    setDialogOpen(false);
+                    handleTakeQuiz(viewQuiz);
+                  }}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                >
                   <Play className="w-4 h-4 mr-2" />
                   Take This Quiz
                 </Button>

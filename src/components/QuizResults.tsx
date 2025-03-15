@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, RefreshCw, Save, DownloadCloud, HelpCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, RefreshCw, Save, DownloadCloud, HelpCircle, Trophy, BookOpen, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Question, createQuiz, saveQuiz, generatePDF } from '@/utils/quizUtils';
+import { Progress } from '@/components/ui/progress';
 
 interface QuizResultsProps {
   questions: Question[];
@@ -24,13 +26,15 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
     ? Math.round((correctAnswers / totalQuestions) * 100) 
     : 0;
   
-  // Performance message
-  const getPerformanceMessage = () => {
-    if (scorePercentage >= 90) return "Excellent job!";
-    if (scorePercentage >= 70) return "Great work!";
-    if (scorePercentage >= 50) return "Good effort!";
-    return "Keep practicing!";
+  // Performance message and color
+  const getPerformanceData = () => {
+    if (scorePercentage >= 90) return { message: "Excellent job!", color: "text-green-600" };
+    if (scorePercentage >= 70) return { message: "Great work!", color: "text-blue-600" };
+    if (scorePercentage >= 50) return { message: "Good effort!", color: "text-yellow-600" };
+    return { message: "Keep practicing!", color: "text-orange-600" };
   };
+
+  const performanceData = getPerformanceData();
 
   // Save quiz results
   const handleSaveResults = () => {
@@ -42,8 +46,7 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
   // Download quiz results as PDF
   const handleDownloadPDF = () => {
     const quiz = createQuiz(`Quiz Results - ${new Date().toLocaleString()}`, questions);
-    // This calls your utility function (see sample code below)
-    generatePDF(quiz,userAnswers);
+    generatePDF(quiz, userAnswers);
   };
 
   return (
@@ -51,126 +54,143 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
+      className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden"
     >
-      <div className="p-6 border-b border-gray-100 text-center">
-        <h3 className="text-2xl font-semibold mb-2">Quiz Results</h3>
-        <p className="text-muted-foreground">{getPerformanceMessage()}</p>
+      <div className="p-8 text-center border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <motion.div 
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          className="mb-4 inline-flex items-center justify-center w-20 h-20 rounded-full bg-white shadow-sm border-4 border-indigo-100"
+        >
+          <Trophy className="w-10 h-10 text-indigo-600" />
+        </motion.div>
+        <h3 className="text-2xl font-bold mb-2">Quiz Complete!</h3>
+        <p className={`text-xl font-semibold ${performanceData.color} mb-4`}>
+          {performanceData.message}
+        </p>
+        <Progress value={scorePercentage} className="h-2 w-64 mx-auto bg-gray-100" indicatorClassName="bg-gradient-to-r from-indigo-500 to-purple-600" />
       </div>
       
       <div className="p-6">
         {/* Score display */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-32 h-32 rounded-full border-8 border-primary/10 mb-4">
-            <span className="text-3xl font-bold text-primary">{scorePercentage}%</span>
-          </div>
-          <div className="flex justify-center space-x-8 text-center">
-            <div>
-              <div className="text-3xl font-semibold">{correctAnswers}</div>
-              <div className="text-sm text-muted-foreground">Correct</div>
-            </div>
-            <div>
-              <div className="text-3xl font-semibold">{totalQuestions - correctAnswers}</div>
-              <div className="text-sm text-muted-foreground">Incorrect</div>
-            </div>
-            <div>
-              <div className="text-3xl font-semibold">{totalQuestions}</div>
-              <div className="text-sm text-muted-foreground">Total</div>
-            </div>
+        <div className="mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-green-50 p-4 rounded-lg border border-green-100"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span className="text-2xl font-bold text-green-600">{correctAnswers}</span>
+              </div>
+              <p className="text-sm text-green-700">Correct Answers</p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-red-50 p-4 rounded-lg border border-red-100"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <XCircle className="w-5 h-5 text-red-600" />
+                <span className="text-2xl font-bold text-red-600">{totalQuestions - correctAnswers}</span>
+              </div>
+              <p className="text-sm text-red-700">Incorrect Answers</p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-indigo-50 p-4 rounded-lg border border-indigo-100"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <PieChart className="w-5 h-5 text-indigo-600" />
+                <span className="text-2xl font-bold text-indigo-600">{scorePercentage}%</span>
+              </div>
+              <p className="text-sm text-indigo-700">Total Score</p>
+            </motion.div>
           </div>
         </div>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <Button
+            variant="outline"
+            className="flex-1 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            onClick={handleSaveResults}
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Save Results
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50"
+            onClick={handleDownloadPDF}
+          >
+            <DownloadCloud className="w-4 h-4 mr-2" />
+            Download PDF
+          </Button>
+          <Button
+            className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+            onClick={onRestartQuiz}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
         
-        {/* Question breakdown */}
-        <h4 className="font-medium mb-4">Question Breakdown</h4>
-        <div className="space-y-6 mb-6">
+        {/* Question review */}
+        <div className="space-y-4">
+          <div className="flex items-center mb-4">
+            <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+            <h4 className="text-lg font-semibold">Question Review</h4>
+          </div>
           {questions.map((question, index) => {
             const userAnswerId = userAnswers[question.id];
             const userAnswerObj = question.answers.find(a => a.id === userAnswerId);
             const correctAnswer = question.answers.find(a => a.isCorrect);
             const isCorrect = userAnswerId === correctAnswer?.id;
 
-            // Optional: "Show Explanation" toggle
-            const [showExplanation, setShowExplanation] = useState(false);
-
             return (
-              <div key={question.id} className="space-y-2 p-3 border rounded-lg">
-                {/* Row: correct or incorrect icon, question text */}
-                <div className="flex items-start">
-                  <div className="mr-3 pt-1">
-                    {isCorrect ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    )}
+              <motion.div
+                key={question.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`p-4 rounded-lg border ${
+                  isCorrect ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`mt-1 ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                    {isCorrect ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-medium mb-1">
-                      Question {index + 1}
-                    </div>
-                    <div className="text-sm text-foreground">{question.text}</div>
-                  </div>
-                </div>
-
-                {/* Row: your answer vs correct answer */}
-                <div className="pl-8 text-sm text-foreground/80">
-                  <p className="mt-1">
-                    <strong>Your Answer:</strong>{' '}
-                    {userAnswerObj ? userAnswerObj.text : 'No answer selected'}
-                  </p>
-                  <p>
-                    <strong>Correct Answer:</strong>{' '}
-                    {correctAnswer?.text}
-                  </p>
-                </div>
-
-                {/* Explanation toggle (only if explanation exists) */}
-                {question.explanation && (
-                  <div className="pl-8 pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center space-x-2"
-                      onClick={() => setShowExplanation(!showExplanation)}
-                    >
-                      <HelpCircle className="w-4 h-4" />
-                      <span>{showExplanation ? 'Hide Explanation' : 'Show Explanation'}</span>
-                    </Button>
-                    <AnimatePresence>
-                      {showExplanation && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="mt-2 p-2 bg-muted/10 rounded"
-                        >
-                          <p className="text-sm text-muted-foreground">
-                            {question.explanation}
-                          </p>
-                        </motion.div>
+                    <p className="font-medium mb-2">{question.text}</p>
+                    <div className="space-y-1 text-sm">
+                      <p className={`${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                        Your answer: {userAnswerObj?.text || 'No answer selected'}
+                      </p>
+                      {!isCorrect && (
+                        <p className="text-green-700">
+                          Correct answer: {correctAnswer?.text}
+                        </p>
                       )}
-                    </AnimatePresence>
+                      {question.explanation && (
+                        <p className="mt-2 text-gray-600 bg-white bg-opacity-50 p-2 rounded">
+                          {question.explanation}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              </motion.div>
             );
           })}
-        </div>
-        
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" className="flex-1" onClick={onRestartQuiz}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Again
-          </Button>
-          <Button variant="outline" className="flex-1" onClick={handleSaveResults}>
-            <Save className="w-4 h-4 mr-2" />
-            Save Results
-          </Button>
-          <Button variant="outline" className="flex-1" onClick={handleDownloadPDF}>
-            <DownloadCloud className="w-4 h-4 mr-2" />
-            Download PDF
-          </Button>
         </div>
       </div>
     </motion.div>

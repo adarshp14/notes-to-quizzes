@@ -7,7 +7,8 @@ import QuizCard from '@/components/QuizCard';
 import QuizResults from '@/components/QuizResults';
 import { Question } from '@/utils/quizUtils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Brain } from 'lucide-react';
+import { toast } from 'sonner';
 
 const TakeQuiz = () => {
   const location = useLocation();
@@ -17,10 +18,12 @@ const TakeQuiz = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string | null>>({});
   const [showResults, setShowResults] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check if we have questions in the location state
     if (location.state?.questions) {
+      setIsLoading(true);
       const receivedQuestions = location.state.questions as Question[];
       setQuestions(receivedQuestions);
       
@@ -30,17 +33,21 @@ const TakeQuiz = () => {
         initialAnswers[q.id] = null;
       });
       setUserAnswers(initialAnswers);
+      setIsLoading(false);
     } else {
       // Redirect to create quiz if no questions are available
+      toast.error("No quiz questions found. Redirecting to quiz creation.");
       navigate('/create');
     }
   }, [location.state, navigate]);
 
   // Handle selecting an answer
   const handleAnswerSelect = (answerId: string) => {
-    if (questions.length === 0) return;
+    if (questions.length === 0 || showResults) return;
     
     const currentQuestion = questions[currentQuestionIndex];
+    
+    // Allow changing answer before moving to next question
     setUserAnswers(prev => ({
       ...prev,
       [currentQuestion.id]: answerId
@@ -76,6 +83,8 @@ const TakeQuiz = () => {
     setCurrentQuestionIndex(0);
     setShowResults(false);
     setQuizCompleted(false);
+    
+    toast.success("Quiz restarted. Good luck!");
   };
 
   // Return to create page
@@ -83,13 +92,37 @@ const TakeQuiz = () => {
     navigate('/create');
   };
 
+  if (isLoading) {
+    return (
+      <>
+        <Header />
+        <main className="page-container mt-20">
+          <div className="text-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4"
+            >
+              <Brain className="w-8 h-8 text-indigo-600 animate-pulse" />
+            </motion.div>
+            <h2 className="text-xl font-semibold mb-2">Loading quiz questions...</h2>
+            <p className="text-muted-foreground">Please wait while we prepare your quiz.</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   if (questions.length === 0) {
     return (
       <>
         <Header />
         <main className="page-container mt-20">
           <div className="text-center">
-            <p>Loading quiz questions...</p>
+            <p>No questions available for this quiz. Please create a new quiz.</p>
+            <Button onClick={handleBackToCreate} className="mt-4 bg-indigo-600 hover:bg-indigo-700">
+              Create New Quiz
+            </Button>
           </div>
         </main>
       </>
@@ -110,14 +143,14 @@ const TakeQuiz = () => {
         >
           <Button 
             variant="ghost" 
-            className="mb-4" 
+            className="mb-4 text-indigo-700 hover:bg-indigo-50" 
             onClick={handleBackToCreate}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Create
           </Button>
           
-          <h1 className="text-3xl font-bold mb-2">Take Quiz</h1>
+          <h1 className="text-3xl font-bold mb-2 text-gray-800">Take Quiz</h1>
           {!quizCompleted && (
             <p className="text-muted-foreground">
               Complete the quiz by answering all questions. You can review your answers at the end.
