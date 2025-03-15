@@ -60,17 +60,22 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       
       if (questions.length === 0) {
         toast.error('No questions could be generated. Using demo questions instead.');
-        // Await the demo questions Promise
-        const demoQuestions = await generateDemoQuestions(
-          notes,
-          settings.questionCount,
-          settings.answerOptions,
-          settings.questionTypes,
-          settings.difficulty
-        );
-        setCurrentQuiz(demoQuestions);
-        onQuizGenerated(demoQuestions);
-        toast.success(`Generated ${demoQuestions.length} demo questions as fallback`);
+        try {
+          // Await the demo questions Promise
+          const demoQuestions = await generateDemoQuestions(
+            notes,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
+          setCurrentQuiz(demoQuestions);
+          onQuizGenerated(demoQuestions);
+          toast.success(`Generated ${demoQuestions.length} demo questions as fallback`);
+        } catch (demoError) {
+          console.error('DEBUG - Error generating demo questions:', demoError);
+          toast.error('Failed to generate fallback questions. Please try again.');
+        }
         return;
       }
       
@@ -121,17 +126,22 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       
       if (questions.length === 0) {
         toast.error('No questions could be generated. Using demo questions instead.');
-        // Await the demo questions Promise
-        const demoQuestions = await generateDemoQuestions(
-          file.name,
-          settings.questionCount,
-          settings.answerOptions,
-          settings.questionTypes,
-          settings.difficulty
-        );
-        setCurrentQuiz(demoQuestions);
-        onQuizGenerated(demoQuestions);
-        toast.success(`Generated ${demoQuestions.length} demo questions as fallback`);
+        try {
+          // Await the demo questions Promise
+          const demoQuestions = await generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
+          setCurrentQuiz(demoQuestions);
+          onQuizGenerated(demoQuestions);
+          toast.success(`Generated ${demoQuestions.length} demo questions as fallback`);
+        } catch (demoError) {
+          console.error('DEBUG - Error generating demo questions:', demoError);
+          toast.error('Failed to generate fallback questions. Please try again.');
+        }
         return;
       }
       

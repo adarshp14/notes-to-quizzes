@@ -24,8 +24,15 @@ export const generateQuizFromNotes = async (
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    // Use direct URL rather than proxy
+    // Get the API URL from environment variables
     const apiUrl = import.meta.env.VITE_API_URL || '';
+    
+    if (!apiUrl) {
+      console.error("DEBUG - No API URL configured");
+      throw new Error("API URL not configured");
+    }
+    
+    // Direct API call to the text quiz endpoint
     const endpoint = `${apiUrl}/generate-text-quiz`;
     
     console.log("DEBUG - Calling API endpoint:", endpoint);
@@ -64,15 +71,8 @@ export const generateQuizFromNotes = async (
     
     if (data.questions && Array.isArray(data.questions)) {
       if (data.questions.length === 0) {
-        // If the API returns no questions, use the fallback
         console.log("DEBUG - API returned empty questions array, using fallback");
-        return generateDemoQuestions(
-          notes,
-          settings.questionCount,
-          settings.answerOptions,
-          settings.questionTypes,
-          settings.difficulty
-        );
+        return [];
       }
       return convertApiResponsesToQuestions(data.questions);
     } else {
@@ -81,14 +81,7 @@ export const generateQuizFromNotes = async (
     }
   } catch (error) {
     console.error('DEBUG - Error generating quiz from notes:', error);
-    // fallback to demo
-    return generateDemoQuestions(
-      notes,
-      settings.questionCount,
-      settings.answerOptions,
-      settings.questionTypes,
-      settings.difficulty
-    );
+    throw error; // Propagate the error so the component can handle it
   }
 };
 
@@ -101,8 +94,15 @@ export const generateQuizFromFile = async (
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    // Use direct URL rather than proxy
+    // Get the API URL from environment variables
     const apiUrl = import.meta.env.VITE_API_URL || '';
+    
+    if (!apiUrl) {
+      console.error("DEBUG - No API URL configured");
+      throw new Error("API URL not configured");
+    }
+    
+    // Direct API call to the file quiz endpoint
     const endpoint = `${apiUrl}/generate-file-quiz`;
     
     console.log("DEBUG - Calling API endpoint:", endpoint);
@@ -139,15 +139,8 @@ export const generateQuizFromFile = async (
       
       if (data.questions) {
         if (data.questions.length === 0) {
-          // If the API returns no questions, use the fallback
           console.log("DEBUG - API returned empty questions array, using fallback");
-          return generateDemoQuestions(
-            file.name,
-            settings.questionCount,
-            settings.answerOptions,
-            settings.questionTypes,
-            settings.difficulty
-          );
+          return [];
         }
         return convertApiResponsesToQuestions(data.questions);
       } else {
@@ -184,15 +177,8 @@ export const generateQuizFromFile = async (
       
       if (data.questions) {
         if (data.questions.length === 0) {
-          // If the API returns empty questions, use the fallback
           console.log("DEBUG - API returned empty questions array, using fallback");
-          return generateDemoQuestions(
-            file.name,
-            settings.questionCount,
-            settings.answerOptions,
-            settings.questionTypes,
-            settings.difficulty
-          );
+          return [];
         }
         return convertApiResponsesToQuestions(data.questions);
       } else {
@@ -202,13 +188,6 @@ export const generateQuizFromFile = async (
     }
   } catch (error) {
     console.error('DEBUG - Error generating quiz from file:', error);
-    // fallback to demo
-    return generateDemoQuestions(
-      file.name,
-      settings.questionCount,
-      settings.answerOptions,
-      settings.questionTypes,
-      settings.difficulty
-    );
+    throw error; // Propagate the error so the component can handle it
   }
 };
