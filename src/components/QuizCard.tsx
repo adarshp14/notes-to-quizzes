@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Question, Answer, MatchItem } from '@/utils/quizUtils';
+import { Question, Answer, MatchItem, QuestionType } from '@/utils/quizUtils';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -99,12 +100,13 @@ const QuizCard: React.FC<QuizCardProps> = ({
 
   const { items, matches } = question.type === 'matching' ? generateMatches() : { items: [], matches: [] };
 
-  const renderQuestionContent = () => {
-    switch (question.type) {
+  // This function handles rendering different question types, including mixed types
+  const renderQuestionContent = (questionToRender: Question = question) => {
+    switch (questionToRender.type) {
       case 'multiple-choice':
         return (
           <div className="space-y-4">
-            {question.answers.map((answer) => (
+            {questionToRender.answers.map((answer) => (
               <motion.div
                 key={answer.id}
                 initial={{ opacity: 0.8, y: 5 }}
@@ -148,7 +150,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
         return (
           <div className="space-y-4">
             {['True', 'False'].map((option) => {
-              const answer = question.answers.find(a => a.text === option);
+              const answer = questionToRender.answers.find(a => a.text === option);
               if (!answer) return null;
               
               return (
@@ -277,8 +279,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
                         <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
                           <p className="text-sm text-green-700">
                             <span className="font-medium">Correct match: </span>
-                            {question.correctMatching && 
-                             question.correctMatching.split(',').find(pair => pair.trim().startsWith(String.fromCharCode(97 + index)))
+                            {questionToRender.correctMatching && 
+                             questionToRender.correctMatching.split(',').find(pair => pair.trim().startsWith(String.fromCharCode(97 + index)))
                                 ?.split('-')[1]?.trim() || '?'}
                           </p>
                         </div>
@@ -288,10 +290,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
                 </div>
               ))}
               
-              {showResults && question.correctMatching && (
+              {showResults && questionToRender.correctMatching && (
                 <div className="mt-4 p-3 bg-white rounded border">
                   <p className="text-sm font-medium text-gray-700 mb-2">Correct matching:</p>
-                  {question.correctMatching.split(',').map(pair => {
+                  {questionToRender.correctMatching.split(',').map(pair => {
                     const [letter, number] = pair.trim().split('-');
                     const itemIndex = letter.charCodeAt(0) - 97;
                     const item = items[itemIndex] || `Item ${letter}`;
@@ -315,24 +317,45 @@ const QuizCard: React.FC<QuizCardProps> = ({
         );
       
       case 'mixed':
-        if (question.answers.length === 2 && 
-            question.answers.some(a => a.text === 'True') && 
-            question.answers.some(a => a.text === 'False')) {
-          return renderQuestionContent.call({ ...this, question: { ...question, type: 'true-false' } });
-        } else if (question.correctMatching) {
-          return renderQuestionContent.call({ ...this, question: { ...question, type: 'matching' } });
-        } else if (question.text.includes('_____')) {
-          return renderQuestionContent.call({ ...this, question: { ...question, type: 'fill-in-the-blank' } });
-        } else if (question.answers.length === 1) {
-          return renderQuestionContent.call({ ...this, question: { ...question, type: 'short-answer' } });
+        // Fixed approach: Create a modified question and pass it to renderQuestionContent
+        if (questionToRender.answers.length === 2 && 
+            questionToRender.answers.some(a => a.text === 'True') && 
+            questionToRender.answers.some(a => a.text === 'False')) {
+          const modifiedQuestion: Question = {
+            ...questionToRender,
+            type: 'true-false'
+          };
+          return renderQuestionContent(modifiedQuestion);
+        } else if (questionToRender.correctMatching) {
+          const modifiedQuestion: Question = {
+            ...questionToRender,
+            type: 'matching'
+          };
+          return renderQuestionContent(modifiedQuestion);
+        } else if (questionToRender.text.includes('_____')) {
+          const modifiedQuestion: Question = {
+            ...questionToRender,
+            type: 'fill-in-the-blank'
+          };
+          return renderQuestionContent(modifiedQuestion);
+        } else if (questionToRender.answers.length === 1) {
+          const modifiedQuestion: Question = {
+            ...questionToRender,
+            type: 'short-answer'
+          };
+          return renderQuestionContent(modifiedQuestion);
         } else {
-          return renderQuestionContent.call({ ...this, question: { ...question, type: 'multiple-choice' } });
+          const modifiedQuestion: Question = {
+            ...questionToRender,
+            type: 'multiple-choice'
+          };
+          return renderQuestionContent(modifiedQuestion);
         }
       
       default:
         return (
           <div className="p-4 border rounded-lg">
-            <p className="text-gray-500">This question type ({question.type}) is not supported.</p>
+            <p className="text-gray-500">This question type ({questionToRender.type}) is not supported.</p>
           </div>
         );
     }
