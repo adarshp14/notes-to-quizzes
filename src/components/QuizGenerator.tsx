@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { 
+  generateDemoQuestions, 
   Question, 
   createQuiz, 
   saveQuiz, 
   generatePDF,
-  generateDemoQuestions,
+  convertApiResponsesToQuestions
 } from '@/utils/quizUtils';
-import { generateQuizFromNotes, generateQuizFromFile } from '@/utils/quizAPI';
 import { QuizSettings } from './QuizCustomizer';
 
 interface QuizGeneratorProps {
@@ -20,6 +20,14 @@ interface QuizGeneratorProps {
   settings: QuizSettings;
   onQuizGenerated: (questions: Question[]) => void;
   inputMethod: 'text' | 'upload';
+}
+
+interface ApiQuestion {
+  question: string;
+  options: string[] | null;
+  correct_answer: string;
+  explanation: string;
+  question_type: string;
 }
 
 const QuizGenerator: React.FC<QuizGeneratorProps> = ({
@@ -32,15 +40,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
-  const baseUrl = import.meta.env.VITE_API_URL || '';
-  
-  // Debug logging on component mount
-  useEffect(() => {
-    console.log("DEBUG - QuizGenerator mounted");
-    console.log("DEBUG - Environment API URL:", baseUrl);
-    console.log("DEBUG - Environment variables:", import.meta.env);
-  }, [baseUrl]);
-  
+  const baseUrl = import.meta.env.VITE_API_URL;
+
   // -----------------------------
   // Generate from typed notes
   // -----------------------------
@@ -53,20 +54,62 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
-      console.log("DEBUG - Starting generateQuizFromNotes call");
-      toast.loading('Generating quiz from your notes...');
-      
-      const questions = await generateQuizFromNotes(notes, settings);
-      console.log("DEBUG - generateQuizFromNotes returned successfully with", questions.length, "questions");
-      
-      toast.dismiss();
-      setCurrentQuiz(questions);
-      onQuizGenerated(questions);
-      toast.success(`Generated ${questions.length} questions from your notes!`);
+      // Map the application's question type to the API's question type format
+      let apiQuestionType;
+      if (settings.questionTypes === 'multiple-choice') {
+        apiQuestionType = 'multiple_choice';
+      } else if (settings.questionTypes === 'true-false') {
+        apiQuestionType = 'true_false';
+      } else if (settings.questionTypes === 'fill-in-the-blank') {
+        apiQuestionType = 'fill_in_the_blank';
+      } else if (settings.questionTypes === 'short-answer') {
+        apiQuestionType = 'short_answer';
+      } else if (settings.questionTypes === 'matching') {
+        apiQuestionType = 'matching';
+      } else {
+        apiQuestionType = 'mixed';
+      }
+
+      const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: notes,
+          num_questions: settings.questionCount,
+          num_options: settings.answerOptions,
+          question_type: apiQuestionType,
+          difficulty: settings.difficulty
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.questions && Array.isArray(data.questions)) {
+        const questions = convertApiResponsesToQuestions(data.questions);
+        setCurrentQuiz(questions);
+        onQuizGenerated(questions);
+        toast.success(`Generated ${questions.length} questions from your notes!`);
+      } else {
+        throw new Error('Invalid response from quiz generation API');
+      }
     } catch (error) {
-      console.error('DEBUG - Error in handleGenerateFromNotes:', error);
-      toast.dismiss();
-      toast.error('Failed to generate quiz. Please try again.');
+      console.error('Error generating quiz from notes:', error);
+      // fallback to demo
+      const demoQuestions = await generateDemoQuestions(
+        notes,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
+      setCurrentQuiz(demoQuestions);
+      onQuizGenerated(demoQuestions);
+      toast.warning(`Couldn't connect to the API. Generated demo questions instead.`);
     } finally {
       setIsGenerating(false);
     }
@@ -86,20 +129,91 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
-      console.log("DEBUG - Starting generateQuizFromFile call");
-      toast.loading('Generating quiz from your file...');
-      
-      const questions = await generateQuizFromFile(file, settings);
-      console.log("DEBUG - generateQuizFromFile returned successfully with", questions.length, "questions");
-      
-      toast.dismiss();
-      setCurrentQuiz(questions);
-      onQuizGenerated(questions);
-      toast.success(`Generated ${questions.length} questions from your file!`);
+      // Map the application's question type to the API's question type format
+      let apiQuestionType;
+      if (settings.questionTypes === 'multiple-choice') {
+        apiQuestionType = 'multiple_choice';
+      } else if (settings.questionTypes === 'true-false') {
+        apiQuestionType = 'true_false';
+      } else if (settings.questionTypes === 'fill-in-the-blank') {
+        apiQuestionType = 'fill_in_the_blank';
+      } else if (settings.questionTypes === 'short-answer') {
+        apiQuestionType = 'short_answer';
+      } else if (settings.questionTypes === 'matching') {
+        apiQuestionType = 'matching';
+      } else {
+        apiQuestionType = 'mixed';
+      }
+
+      if (file.type === 'text/plain') {
+        // If it's plain text, read its contents & call /generate-text-quiz
+        const textContent = await file.text();
+        const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: textContent,
+            num_questions: settings.questionCount,
+            num_options: settings.answerOptions,
+            question_type: apiQuestionType,
+            difficulty: settings.difficulty
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.questions) {
+          const questions = convertApiResponsesToQuestions(data.questions);
+          setCurrentQuiz(questions);
+          onQuizGenerated(questions);
+          toast.success(`Generated ${questions.length} questions from your text file!`);
+        } else {
+          throw new Error('Invalid response from quiz generation API');
+        }
+      } else {
+        // Otherwise, call /generate-file-quiz with FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('num_questions', settings.questionCount.toString());
+        formData.append('num_options', settings.answerOptions.toString());
+        formData.append('question_type', apiQuestionType);
+        formData.append('difficulty', settings.difficulty);
+
+        const response = await fetch(`${baseUrl}/generate-file-quiz`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.questions) {
+          const questions = convertApiResponsesToQuestions(data.questions);
+          setCurrentQuiz(questions);
+          onQuizGenerated(questions);
+          toast.success(`Generated ${questions.length} questions from your file!`);
+        } else {
+          throw new Error('Invalid response from quiz generation API');
+        }
+      }
     } catch (error) {
-      console.error('DEBUG - Error in handleGenerateFromFile:', error);
-      toast.dismiss();
-      toast.error('Failed to generate quiz from file. Please try again.');
+      console.error('Error generating quiz from file:', error);
+      // fallback to demo
+      const demoQuestions = await generateDemoQuestions(
+        file.name,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
+      setCurrentQuiz(demoQuestions);
+      onQuizGenerated(demoQuestions);
+      toast.warning(`Couldn't process the file. Generated demo questions instead.`);
     } finally {
       setIsUploading(false);
       setIsGenerating(false);
@@ -173,18 +287,25 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         </Button>
       </div>
 
-      {/* Environment Debug Info (only visible in development) */}
-      {import.meta.env.DEV && (
-        <div className="p-2 mt-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-          <details>
-            <summary className="cursor-pointer font-mono">Debug Info</summary>
-            <div className="mt-2">
-              <p>API URL: {baseUrl}</p>
-              <p>Input Method: {inputMethod}</p>
-              <p>Settings: {JSON.stringify(settings)}</p>
-            </div>
-          </details>
-        </div>
+      {isGenerating && (
+        <Card className="overflow-hidden">
+          <CardHeader className="p-6 animate-pulse bg-muted/30">
+            <div className="h-4 w-3/4 bg-muted rounded mb-2"></div>
+            <div className="h-4 w-1/2 bg-muted rounded"></div>
+          </CardHeader>
+          <div className="p-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-3">
+                <div className="h-4 w-full bg-muted/50 rounded"></div>
+                <div className="space-y-2">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-3 w-5/6 bg-muted/40 rounded"></div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {currentQuiz && !isGenerating && (
