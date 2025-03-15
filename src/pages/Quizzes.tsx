@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Clock, Calendar, Play, Trash2 } from 'lucide-react';
+import { Brain, Clock, Calendar, Play, Trash2, Eye } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -17,12 +17,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { getSavedQuizzes, Quiz } from '@/utils/quizUtils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const Quizzes = () => {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+  const [viewQuiz, setViewQuiz] = useState<Quiz | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Load saved quizzes on component mount
   useEffect(() => {
@@ -53,6 +64,12 @@ const Quizzes = () => {
     localStorage.setItem('savedQuizzes', JSON.stringify(updatedQuizzes));
     setQuizzes(updatedQuizzes);
     toast.success('Quiz deleted successfully');
+  };
+
+  // View quiz questions
+  const handleViewQuiz = (quiz: Quiz) => {
+    setViewQuiz(quiz);
+    setDialogOpen(true);
   };
 
   // Navigate to create quiz page
@@ -156,6 +173,14 @@ const Quizzes = () => {
                           Take Quiz
                         </Button>
                         
+                        <Button 
+                          variant="outline" 
+                          className="px-3"
+                          onClick={() => handleViewQuiz(quiz)}
+                        >
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
@@ -191,6 +216,63 @@ const Quizzes = () => {
             </motion.div>
           )}
         </div>
+
+        {/* View Quiz Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle>{viewQuiz?.title}</DialogTitle>
+              <DialogDescription>
+                Created on {viewQuiz && formatDate(viewQuiz.createdAt)}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {viewQuiz && (
+              <div className="mt-4 space-y-6">
+                <h3 className="text-lg font-medium">Questions</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>Question</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Correct Answer</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewQuiz.questions.map((question, index) => {
+                      const correctAnswer = question.answers.find(a => a.isCorrect);
+                      
+                      return (
+                        <TableRow key={question.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{question.text}</TableCell>
+                          <TableCell className="capitalize">
+                            {question.type.replace('-', ' ')}
+                          </TableCell>
+                          <TableCell>{correctAnswer?.text || 'N/A'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button onClick={() => setDialogOpen(false)}>Close</Button>
+              {viewQuiz && (
+                <Button onClick={() => {
+                  setDialogOpen(false);
+                  handleTakeQuiz(viewQuiz);
+                }}>
+                  <Play className="w-4 h-4 mr-2" />
+                  Take This Quiz
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </>
   );
