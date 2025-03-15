@@ -122,31 +122,6 @@ const Index = () => {
                 Take Quiz
               </Link>
             </motion.div>
-            
-            {/* App Screenshot */}
-            <motion.div
-              className="mt-16 max-w-4xl mx-auto rounded-lg shadow-xl overflow-hidden"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="relative bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
-                <div className="absolute top-0 left-0 right-0 h-6 bg-gray-100 dark:bg-gray-700 rounded-t-lg flex items-center px-3">
-                  <div className="flex space-x-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
-                  </div>
-                </div>
-                <div className="pt-6 pb-2 flex justify-center">
-                  <img 
-                    src="/lovable-uploads/e37efa16-dd02-420a-8a89-1600f05fa4c6.png" 
-                    alt="QuizCraft App Screenshot" 
-                    className="rounded mx-auto max-h-[400px] object-contain"
-                  />
-                </div>
-              </div>
-            </motion.div>
           </div>
         </section>
 
