@@ -10,6 +10,7 @@ import {
   createQuiz, 
   saveQuiz, 
   generatePDF,
+  generateDemoQuestions, // Add this import
 } from '@/utils/quizUtils';
 import { generateQuizFromNotes, generateQuizFromFile } from '@/utils/quizAPI';
 import { QuizSettings } from './QuizCustomizer';
