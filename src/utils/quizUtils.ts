@@ -27,7 +27,7 @@ export interface Quiz {
 
 interface ApiQuestion {
   question: string;
-  options: string[];
+  options: string[] | null;
   correct_answer: string;
   explanation: string;
   question_type: string;
@@ -42,11 +42,21 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
     const questionType: QuestionType =
       apiQ.question_type === 'true_false' ? 'true-false' : 'multiple-choice';
 
-    const answers: Answer[] = apiQ.options.map(option => ({
+    const options = apiQ.options || [];
+    
+    let answers: Answer[] = options.map(option => ({
       id: generateId(),
       text: option,
       isCorrect: option === apiQ.correct_answer
     }));
+    
+    if (answers.length === 0 && apiQ.correct_answer) {
+      answers = [{
+        id: generateId(),
+        text: apiQ.correct_answer,
+        isCorrect: true
+      }];
+    }
 
     return {
       id: generateId(),

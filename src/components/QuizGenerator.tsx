@@ -24,7 +24,7 @@ interface QuizGeneratorProps {
 
 interface ApiQuestion {
   question: string;
-  options: string[];
+  options: string[] | null;
   correct_answer: string;
   explanation: string;
   question_type: string;
@@ -42,7 +42,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
   const baseUrl = import.meta.env.VITE_API_URL;
 
-  // Map our question types to API question types
   const mapQuestionTypeToApi = (type: QuestionType): string => {
     switch(type) {
       case 'multiple-choice': return 'multiple_choice';
@@ -55,7 +54,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     }
   };
 
-  // Map API question types back to our local types
   const mapApiQuestionTypeToLocal = (type: string): QuestionType => {
     switch(type) {
       case 'multiple_choice': return 'multiple-choice';
@@ -68,24 +66,34 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     }
   };
 
-  // Convert API response to local question shape
   const convertApiResponseToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
-    return apiQuestions.map((q, index) => ({
-      id: `${index + 1}`,
-      text: q.question,
-      type: mapApiQuestionTypeToLocal(q.question_type),
-      answers: q.options.map((option, optIndex) => ({
+    return apiQuestions.map((q, index) => {
+      const options = q.options || [];
+      
+      let answers = options.map((option, optIndex) => ({
         id: `${index + 1}-${optIndex}`,
         text: option,
         isCorrect: option === q.correct_answer
-      })),
-      explanation: q.explanation
-    }));
+      }));
+      
+      if (answers.length === 0 && q.correct_answer) {
+        answers = [{
+          id: `${index + 1}-0`,
+          text: q.correct_answer,
+          isCorrect: true
+        }];
+      }
+
+      return {
+        id: `${index + 1}`,
+        text: q.question,
+        type: mapApiQuestionTypeToLocal(q.question_type),
+        answers: answers,
+        explanation: q.explanation
+      };
+    });
   };
 
-  // -----------------------------
-  // Generate from typed notes
-  // -----------------------------
   const handleGenerateFromNotes = async () => {
     if (!notes.trim()) {
       toast.error('Please enter some notes first.');
@@ -124,7 +132,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       }
     } catch (error) {
       console.error('Error generating quiz from notes:', error);
-      // fallback to demo
       const demoQuestions = await generateDemoQuestions(
         notes,
         settings.questionCount,
@@ -140,9 +147,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     }
   };
 
-  // -----------------------------
-  // Generate from uploaded file
-  // -----------------------------
   const handleGenerateFromFile = async () => {
     if (!file) {
       toast.error('No file selected.');
@@ -155,7 +159,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
     try {
       if (file.type === 'text/plain') {
-        // If it's plain text, read its contents & call /generate-text-quiz
         const textContent = await file.text();
         const response = await fetch(`${baseUrl}/generate-text-quiz`, {
           method: 'POST',
@@ -183,7 +186,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
           throw new Error('Invalid response from quiz generation API');
         }
       } else {
-        // Otherwise, call /generate-file-quiz with FormData
         const formData = new FormData();
         formData.append('file', file);
         formData.append('num_questions', settings.questionCount.toString());
@@ -212,7 +214,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       }
     } catch (error) {
       console.error('Error generating quiz from file:', error);
-      // fallback to demo
       const demoQuestions = await generateDemoQuestions(
         file.name,
         settings.questionCount,
@@ -229,7 +230,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     }
   };
 
-  // Save quiz to DB
   const handleSaveQuiz = () => {
     if (currentQuiz) {
       const quiz = createQuiz('Quiz - ' + new Date().toLocaleString(), currentQuiz);
@@ -237,7 +237,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     }
   };
 
-  // Download quiz as PDF
   const handleDownloadPDF = () => {
     if (currentQuiz) {
       const quiz = createQuiz('Quiz - ' + new Date().toLocaleString(), currentQuiz);
@@ -248,12 +247,11 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
-        {/* Generate from Notes Button */}
         <Button
           onClick={handleGenerateFromNotes}
           disabled={
             isGenerating ||
-            inputMethod !== 'text' ||   // only enable in text mode
+            inputMethod !== 'text' ||
             !notes.trim()
           }
           className="flex-1"
@@ -271,12 +269,11 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
           )}
         </Button>
 
-        {/* Generate from File Button */}
         <Button
           onClick={handleGenerateFromFile}
           disabled={
             isGenerating ||
-            inputMethod !== 'upload' || // only enable in upload mode
+            inputMethod !== 'upload' ||
             !file
           }
           className="flex-1"

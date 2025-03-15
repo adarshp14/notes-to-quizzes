@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -41,6 +40,19 @@ serve(async (req) => {
       questionType, 
       difficulty
     );
+    
+    // Ensure each question has a valid options array
+    questions.forEach(question => {
+      // If options is null, initialize it as an empty array
+      if (question.options === null) {
+        if (question.correct_answer) {
+          // For short_answer or other types with a single correct answer but no options
+          question.options = [question.correct_answer];
+        } else {
+          question.options = [];
+        }
+      }
+    });
     
     return new Response(
       JSON.stringify({ 
@@ -168,11 +180,12 @@ function generateQuestions(
     else if (actualType === "short_answer") {
       // Short answer question
       const shortAnswerQuestion = `Briefly explain the concept of ${topic} in your own words.`;
+      const correctAnswer = `A proper explanation of ${topic} would include key points about its definition, purpose, and application.`;
       
       questions.push({
         question: shortAnswerQuestion,
-        options: [`A proper explanation of ${topic} would include key points about its definition, purpose, and application.`],
-        correct_answer: `A proper explanation of ${topic} would include key points about its definition, purpose, and application.`,
+        options: [correctAnswer], // Ensure options is an array, not null
+        correct_answer: correctAnswer,
         explanation: `A good answer would discuss what ${topic} is and why it's important.`,
         question_type: "short_answer"
       });
