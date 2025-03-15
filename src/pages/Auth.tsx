@@ -44,6 +44,7 @@ const Auth = () => {
 
     try {
       if (isSignUp) {
+        console.log("Initiating signup flow");
         const { error, data } = await signUp(email, password);
 
         if (error) {
@@ -56,15 +57,19 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else if (data) {
+          console.log("Signup data:", data);
           setEmailSent(true);
           toast.success('Verification email sent! Please check your inbox and spam folder.');
         }
       } else {
+        console.log("Initiating signin flow");
         const { error } = await signIn(email, password);
 
         if (error) {
           if (error.message?.includes('Invalid login')) {
             setErrorMessage('Invalid email or password. Please try again.');
+          } else if (error.message?.includes('Email not confirmed')) {
+            setErrorMessage('Please verify your email address before signing in.');
           } else {
             setErrorMessage(error.message);
           }
@@ -75,6 +80,7 @@ const Auth = () => {
         }
       }
     } catch (error) {
+      console.error("Auth error:", error);
       const errorMsg = error instanceof Error ? error.message : 'An error occurred during authentication';
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
@@ -112,6 +118,12 @@ const Auth = () => {
     setEmailSent(false);
   };
 
+  const goBackToSignUp = () => {
+    // This function specifically resets the emailSent state to false
+    // to go back to the signup form from the "email verification sent" screen
+    setEmailSent(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30 p-4">
       <motion.div 
@@ -124,9 +136,13 @@ const Auth = () => {
           <div className="mx-auto w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6">
             <Brain className="w-7 h-7" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {emailSent ? 'Check your email' : (isSignUp ? 'Create an account' : 'Welcome back')}
+          </h2>
           <p className="text-muted-foreground mt-2">
-            {isSignUp ? 'Sign up to start creating quizzes' : 'Sign in to your account'}
+            {emailSent 
+              ? 'We\'ve sent you a verification link' 
+              : (isSignUp ? 'Sign up to start creating quizzes' : 'Sign in to your account')}
           </p>
         </div>
 
@@ -268,11 +284,11 @@ const Auth = () => {
               Didn't receive the email? Check your spam folder or try again.
             </p>
             <Button 
-              onClick={resetForm} 
+              onClick={goBackToSignUp} 
               variant="outline"
               className="w-full"
             >
-              Go back to {isSignUp ? 'sign up' : 'sign in'}
+              Go back to sign up
             </Button>
           </div>
         )}

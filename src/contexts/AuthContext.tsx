@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session?.user?.email);
       setSession(session);
       setUser(session?.user || null);
       setIsLoading(false);
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("Attempting to sign in with:", email);
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password 
@@ -78,16 +80,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
+      console.log("Attempting to sign up with:", email);
+      
+      // For development, specify redirectTo as the current origin + /auth
+      // This ensures proper redirection after email confirmation
+      const redirectUrl = `${window.location.origin}/auth`;
+      console.log("Using redirect URL:", redirectUrl);
+      
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth?redirect=true`,
+          emailRedirectTo: redirectUrl,
           data: {
             email,
           }
         }
       });
+      
+      if (error) {
+        console.error("Signup error:", error.message);
+      } else {
+        console.log("Signup successful, confirmation status:", data?.user?.identities);
+      }
       
       return { data, error };
     } catch (error) {
@@ -102,6 +117,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error("Error signing out:", error);
         toast.error("Error signing out: " + error.message);
+      } else {
+        // Clear user state manually just to be safe
+        setUser(null);
+        setSession(null);
       }
     } catch (error) {
       console.error("Error signing out:", error);
