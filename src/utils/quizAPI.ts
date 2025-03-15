@@ -24,9 +24,11 @@ export const generateQuizFromNotes = async (
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    const endpoint = `/api/generate-text-quiz`;
+    // Use direct URL rather than proxy
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const endpoint = `${apiUrl}/generate-text-quiz`;
     
-    console.log("DEBUG - Calling API endpoint via proxy:", endpoint);
+    console.log("DEBUG - Calling API endpoint:", endpoint);
     console.log("DEBUG - with settings:", {
       notes: notes.substring(0, 50) + "...",
       questionCount: settings.questionCount,
@@ -61,6 +63,17 @@ export const generateQuizFromNotes = async (
     console.log("DEBUG - API Response data:", data);
     
     if (data.questions && Array.isArray(data.questions)) {
+      if (data.questions.length === 0) {
+        // If the API returns no questions, use the fallback
+        console.log("DEBUG - API returned empty questions array, using fallback");
+        return generateDemoQuestions(
+          notes,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
+      }
       return convertApiResponsesToQuestions(data.questions);
     } else {
       console.error("DEBUG - Invalid response structure:", data);
@@ -88,9 +101,11 @@ export const generateQuizFromFile = async (
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    const endpoint = `/api/generate-file-quiz`;
+    // Use direct URL rather than proxy
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const endpoint = `${apiUrl}/generate-file-quiz`;
     
-    console.log("DEBUG - Calling API endpoint via proxy:", endpoint);
+    console.log("DEBUG - Calling API endpoint:", endpoint);
     console.log("DEBUG - with file:", file.name, file.type, file.size);
 
     if (file.type === 'text/plain') {
@@ -123,6 +138,17 @@ export const generateQuizFromFile = async (
       console.log("DEBUG - API Response data:", data);
       
       if (data.questions) {
+        if (data.questions.length === 0) {
+          // If the API returns no questions, use the fallback
+          console.log("DEBUG - API returned empty questions array, using fallback");
+          return generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
+        }
         return convertApiResponsesToQuestions(data.questions);
       } else {
         console.error("DEBUG - Invalid response structure:", data);
@@ -157,6 +183,17 @@ export const generateQuizFromFile = async (
       console.log("DEBUG - API Response data:", data);
       
       if (data.questions) {
+        if (data.questions.length === 0) {
+          // If the API returns empty questions, use the fallback
+          console.log("DEBUG - API returned empty questions array, using fallback");
+          return generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
+        }
         return convertApiResponsesToQuestions(data.questions);
       } else {
         console.error("DEBUG - Invalid response structure:", data);

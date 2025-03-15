@@ -58,7 +58,17 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       console.log("DEBUG - generateQuizFromNotes returned successfully with", questions.length, "questions");
       
       if (questions.length === 0) {
-        toast.error('No questions could be generated. Try different content or settings.');
+        toast.error('No questions could be generated. Using demo questions instead.');
+        const demoQuestions = generateDemoQuestions(
+          notes,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
+        setCurrentQuiz(demoQuestions);
+        onQuizGenerated(demoQuestions);
+        toast.success(`Generated ${demoQuestions.length} demo questions as fallback`);
         return;
       }
       
@@ -67,7 +77,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       toast.success(`Generated ${questions.length} questions from your notes!`);
     } catch (error) {
       console.error('DEBUG - Error in handleGenerateFromNotes:', error);
-      toast.error('Failed to generate quiz. Please try again with different content.');
+      toast.error('Failed to generate quiz. Using demo questions instead.');
+      
+      // Always fall back to demo questions on error
+      const demoQuestions = generateDemoQuestions(
+        notes,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
+      setCurrentQuiz(demoQuestions);
+      onQuizGenerated(demoQuestions);
     } finally {
       setIsGenerating(false);
     }
@@ -92,7 +113,17 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       console.log("DEBUG - generateQuizFromFile returned successfully with", questions.length, "questions");
       
       if (questions.length === 0) {
-        toast.error('No questions could be generated. Try a different file or settings.');
+        toast.error('No questions could be generated. Using demo questions instead.');
+        const demoQuestions = generateDemoQuestions(
+          file.name,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
+        setCurrentQuiz(demoQuestions);
+        onQuizGenerated(demoQuestions);
+        toast.success(`Generated ${demoQuestions.length} demo questions as fallback`);
         return;
       }
       
@@ -101,7 +132,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       toast.success(`Generated ${questions.length} questions from your file!`);
     } catch (error) {
       console.error('DEBUG - Error in handleGenerateFromFile:', error);
-      toast.error('Failed to generate quiz from file. Please try again with a different file.');
+      toast.error('Failed to generate quiz from file. Using demo questions instead.');
+      
+      // Always fall back to demo questions on error
+      const demoQuestions = generateDemoQuestions(
+        file.name,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
+      setCurrentQuiz(demoQuestions);
+      onQuizGenerated(demoQuestions);
     } finally {
       setIsUploading(false);
       setIsGenerating(false);
