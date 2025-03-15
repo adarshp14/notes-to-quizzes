@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import QuizCard from '@/components/QuizCard';
 import QuizResults from '@/components/QuizResults';
-import { Question } from '@/utils/quizUtils';
+import { Question, QuestionType } from '@/utils/quizUtils';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Brain } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,36 +20,61 @@ const TakeQuiz = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEvaluating, setIsEvaluating] = useState(false);
 
+  const mapToQuestionType = (typeStr: string): QuestionType => {
+    switch(typeStr.toLowerCase()) {
+      case 'multiple-choice':
+      case 'multiple_choice':
+        return 'multiple-choice';
+      case 'true-false':
+      case 'true_false':
+        return 'true-false';
+      case 'fill-in-the-blank':
+      case 'fill_in_the_blank':
+        return 'fill-in-the-blank';
+      case 'short-answer':
+      case 'short_answer':
+        return 'short-answer';
+      case 'matching':
+        return 'matching';
+      case 'mixed':
+        return 'mixed';
+      default:
+        return 'multiple-choice'; // Default to multiple-choice if unknown
+    }
+  };
+
   useEffect(() => {
     if (location.state?.questions) {
       setIsLoading(true);
-      const receivedQuestions = location.state.questions as Question[];
+      const receivedQuestions = location.state.questions as any[];
       
       const processedQuestions = receivedQuestions.map(question => {
-        if (question.answers.length === 2 && 
+        let questionType: QuestionType = mapToQuestionType(question.type || '');
+        
+        if (question.answers && question.answers.length === 2 && 
             question.answers.some(a => a.text === 'True') && 
             question.answers.some(a => a.text === 'False')) {
-          return { ...question, type: 'true-false' };
+          questionType = 'true-false';
         }
         
         if (question.correctMatching && 
             /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correctMatching)) {
-          return { ...question, type: 'matching' };
+          questionType = 'matching';
         }
         
-        if (question.type === 'mixed') {
-          return question;
+        if (questionType === 'mixed') {
+          // Keep as mixed, we'll determine the effective type during rendering
         }
         
-        const hasCorrectAnswer = question.answers.some(answer => answer.isCorrect);
+        const hasCorrectAnswer = question.answers?.some(answer => answer.isCorrect);
         
-        if (!hasCorrectAnswer && question.answers.length > 0) {
+        if (!hasCorrectAnswer && question.answers?.length > 0) {
           const updatedAnswers = [...question.answers];
           updatedAnswers[0] = { ...updatedAnswers[0], isCorrect: true };
-          return { ...question, answers: updatedAnswers };
+          return { ...question, answers: updatedAnswers, type: questionType };
         }
         
-        return question;
+        return { ...question, type: questionType };
       });
       
       setQuestions(processedQuestions);
