@@ -56,12 +56,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       console.log("DEBUG - Starting generateQuizFromNotes call");
       const questions = await generateQuizFromNotes(notes, settings);
       console.log("DEBUG - generateQuizFromNotes returned successfully with", questions.length, "questions");
+      
+      if (questions.length === 0) {
+        toast.error('No questions could be generated. Try different content or settings.');
+        return;
+      }
+      
       setCurrentQuiz(questions);
       onQuizGenerated(questions);
       toast.success(`Generated ${questions.length} questions from your notes!`);
     } catch (error) {
       console.error('DEBUG - Error in handleGenerateFromNotes:', error);
-      toast.error('Failed to generate quiz. Please try again.');
+      toast.error('Failed to generate quiz. Please try again with different content.');
     } finally {
       setIsGenerating(false);
     }
@@ -84,12 +90,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       console.log("DEBUG - Starting generateQuizFromFile call");
       const questions = await generateQuizFromFile(file, settings);
       console.log("DEBUG - generateQuizFromFile returned successfully with", questions.length, "questions");
+      
+      if (questions.length === 0) {
+        toast.error('No questions could be generated. Try a different file or settings.');
+        return;
+      }
+      
       setCurrentQuiz(questions);
       onQuizGenerated(questions);
       toast.success(`Generated ${questions.length} questions from your file!`);
     } catch (error) {
       console.error('DEBUG - Error in handleGenerateFromFile:', error);
-      toast.error('Failed to generate quiz from file. Please try again.');
+      toast.error('Failed to generate quiz from file. Please try again with a different file.');
     } finally {
       setIsUploading(false);
       setIsGenerating(false);
