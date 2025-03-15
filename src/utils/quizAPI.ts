@@ -22,11 +22,22 @@ export const generateQuizFromNotes = async (
 ): Promise<Question[]> => {
   try {
     const baseUrl = import.meta.env.VITE_API_URL || '';
-    console.log("Calling API with URL:", baseUrl);
+    console.log("DEBUG - API URL being used for notes:", baseUrl);
+    console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
+    const endpoint = `${baseUrl}/generate-text-quiz`;
+    
+    console.log("DEBUG - Calling API endpoint:", endpoint);
+    console.log("DEBUG - with settings:", {
+      notes: notes.substring(0, 50) + "...",
+      questionCount: settings.questionCount,
+      answerOptions: settings.answerOptions,
+      questionType: apiQuestionType,
+      difficulty: settings.difficulty
+    });
 
-    const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,18 +51,25 @@ export const generateQuizFromNotes = async (
       }),
     });
 
+    console.log("DEBUG - API Response status:", response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("DEBUG - Error response from API:", errorText);
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log("DEBUG - API Response data:", data);
+    
     if (data.questions && Array.isArray(data.questions)) {
       return convertApiResponsesToQuestions(data.questions);
     } else {
+      console.error("DEBUG - Invalid response structure:", data);
       throw new Error('Invalid response from quiz generation API');
     }
   } catch (error) {
-    console.error('Error generating quiz from notes:', error);
+    console.error('DEBUG - Error generating quiz from notes:', error);
     // fallback to demo
     return generateDemoQuestions(
       notes,
@@ -70,15 +88,22 @@ export const generateQuizFromFile = async (
 ): Promise<Question[]> => {
   try {
     const baseUrl = import.meta.env.VITE_API_URL || '';
-    console.log("Calling API with URL:", baseUrl);
+    console.log("DEBUG - API URL being used for file:", baseUrl);
+    console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
+    const endpoint = `${baseUrl}/generate-file-quiz`;
+    
+    console.log("DEBUG - Calling API endpoint:", endpoint);
+    console.log("DEBUG - with file:", file.name, file.type, file.size);
 
     if (file.type === 'text/plain') {
       // If it's plain text, read its contents & call the API
       const textContent = await file.text();
       
-      const response = await fetch(`${baseUrl}/generate-file-quiz`, {
+      console.log("DEBUG - Sending text file content with length:", textContent.length);
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,14 +115,21 @@ export const generateQuizFromFile = async (
         }),
       });
 
+      console.log("DEBUG - API Response status:", response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error("DEBUG - Error response from API:", errorText);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log("DEBUG - API Response data:", data);
+      
       if (data.questions) {
         return convertApiResponsesToQuestions(data.questions);
       } else {
+        console.error("DEBUG - Invalid response structure:", data);
         throw new Error('Invalid response from quiz generation API');
       }
     } else {
@@ -109,29 +141,34 @@ export const generateQuizFromFile = async (
       formData.append('question_type', apiQuestionType);
       formData.append('difficulty', settings.difficulty);
 
-      console.log("Sending file to API:", baseUrl);
-      console.log("File being sent:", file.name, file.type, file.size);
+      console.log("DEBUG - Sending file to API:", endpoint);
+      console.log("DEBUG - File being sent:", file.name, file.type, file.size);
 
-      const response = await fetch(`${baseUrl}/generate-file-quiz`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
 
+      console.log("DEBUG - API Response status:", response.status, response.statusText);
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Error response from API:", errorText);
+        console.error("DEBUG - Error response from API:", errorText);
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log("DEBUG - API Response data:", data);
+      
       if (data.questions) {
         return convertApiResponsesToQuestions(data.questions);
       } else {
+        console.error("DEBUG - Invalid response structure:", data);
         throw new Error('Invalid response from quiz generation API');
       }
     }
   } catch (error) {
-    console.error('Error generating quiz from file:', error);
+    console.error('DEBUG - Error generating quiz from file:', error);
     // fallback to demo
     return generateDemoQuestions(
       file.name,

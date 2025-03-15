@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -33,8 +34,13 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
   const baseUrl = import.meta.env.VITE_API_URL || '';
   
-  console.log("API URL being used:", baseUrl);
-
+  // Debug logging on component mount
+  useEffect(() => {
+    console.log("DEBUG - QuizGenerator mounted");
+    console.log("DEBUG - Environment API URL:", baseUrl);
+    console.log("DEBUG - Environment variables:", import.meta.env);
+  }, [baseUrl]);
+  
   // -----------------------------
   // Generate from typed notes
   // -----------------------------
@@ -47,12 +53,14 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
+      console.log("DEBUG - Starting generateQuizFromNotes call");
       const questions = await generateQuizFromNotes(notes, settings);
+      console.log("DEBUG - generateQuizFromNotes returned successfully with", questions.length, "questions");
       setCurrentQuiz(questions);
       onQuizGenerated(questions);
       toast.success(`Generated ${questions.length} questions from your notes!`);
     } catch (error) {
-      console.error('Error generating quiz from notes:', error);
+      console.error('DEBUG - Error in handleGenerateFromNotes:', error);
       toast.error('Failed to generate quiz. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -73,12 +81,14 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
+      console.log("DEBUG - Starting generateQuizFromFile call");
       const questions = await generateQuizFromFile(file, settings);
+      console.log("DEBUG - generateQuizFromFile returned successfully with", questions.length, "questions");
       setCurrentQuiz(questions);
       onQuizGenerated(questions);
       toast.success(`Generated ${questions.length} questions from your file!`);
     } catch (error) {
-      console.error('Error generating quiz from file:', error);
+      console.error('DEBUG - Error in handleGenerateFromFile:', error);
       toast.error('Failed to generate quiz from file. Please try again.');
     } finally {
       setIsUploading(false);
@@ -153,25 +163,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         </Button>
       </div>
 
-      {isGenerating && (
-        <Card className="overflow-hidden">
-          <CardHeader className="p-6 animate-pulse bg-muted/30">
-            <div className="h-4 w-3/4 bg-muted rounded mb-2"></div>
-            <div className="h-4 w-1/2 bg-muted rounded"></div>
-          </CardHeader>
-          <div className="p-6 space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-3">
-                <div className="h-4 w-full bg-muted/50 rounded"></div>
-                <div className="space-y-2">
-                  {[1, 2, 3, 4].map((j) => (
-                    <div key={j} className="h-3 w-5/6 bg-muted/40 rounded"></div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+      {/* Environment Debug Info (only visible in development) */}
+      {import.meta.env.DEV && (
+        <div className="p-2 mt-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+          <details>
+            <summary className="cursor-pointer font-mono">Debug Info</summary>
+            <div className="mt-2">
+              <p>API URL: {baseUrl}</p>
+              <p>Input Method: {inputMethod}</p>
+              <p>Settings: {JSON.stringify(settings)}</p>
+            </div>
+          </details>
+        </div>
       )}
 
       {currentQuiz && !isGenerating && (
