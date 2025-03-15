@@ -26,7 +26,7 @@ export const generateQuizFromNotes = async (
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
 
-    const response = await fetch(`${baseUrl}/generate-file-quiz`, {
+    const response = await fetch(`${baseUrl}/generate-text-quiz`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

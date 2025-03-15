@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,13 +5,12 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { 
-  generateDemoQuestions, 
   Question, 
   createQuiz, 
   saveQuiz, 
   generatePDF,
-  convertApiResponsesToQuestions
 } from '@/utils/quizUtils';
+import { generateQuizFromNotes, generateQuizFromFile } from '@/utils/quizAPI';
 import { QuizSettings } from './QuizCustomizer';
 
 interface QuizGeneratorProps {
@@ -21,14 +19,6 @@ interface QuizGeneratorProps {
   settings: QuizSettings;
   onQuizGenerated: (questions: Question[]) => void;
   inputMethod: 'text' | 'upload';
-}
-
-interface ApiQuestion {
-  question: string;
-  options: string[] | null;
-  correct_answer: string;
-  explanation: string;
-  question_type: string;
 }
 
 const QuizGenerator: React.FC<QuizGeneratorProps> = ({
@@ -57,63 +47,13 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
-      // Map the application's question type to the API's question type format
-      let apiQuestionType;
-      if (settings.questionTypes === 'multiple-choice') {
-        apiQuestionType = 'multiple_choice';
-      } else if (settings.questionTypes === 'true-false') {
-        apiQuestionType = 'true_false';
-      } else if (settings.questionTypes === 'fill-in-the-blank') {
-        apiQuestionType = 'fill_in_the_blank';
-      } else if (settings.questionTypes === 'short-answer') {
-        apiQuestionType = 'short_answer';
-      } else if (settings.questionTypes === 'matching') {
-        apiQuestionType = 'matching';
-      } else {
-        apiQuestionType = 'mixed';
-      }
-
-      // Use the Supabase edge function URL
-      const response = await fetch(`${baseUrl}/generate-file-quiz`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: notes,
-          num_questions: settings.questionCount,
-          num_options: settings.answerOptions,
-          question_type: apiQuestionType,
-          difficulty: settings.difficulty
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (data.questions && Array.isArray(data.questions)) {
-        const questions = convertApiResponsesToQuestions(data.questions);
-        setCurrentQuiz(questions);
-        onQuizGenerated(questions);
-        toast.success(`Generated ${questions.length} questions from your notes!`);
-      } else {
-        throw new Error('Invalid response from quiz generation API');
-      }
+      const questions = await generateQuizFromNotes(notes, settings);
+      setCurrentQuiz(questions);
+      onQuizGenerated(questions);
+      toast.success(`Generated ${questions.length} questions from your notes!`);
     } catch (error) {
       console.error('Error generating quiz from notes:', error);
-      // fallback to demo
-      const demoQuestions = await generateDemoQuestions(
-        notes,
-        settings.questionCount,
-        settings.answerOptions,
-        settings.questionTypes,
-        settings.difficulty
-      );
-      setCurrentQuiz(demoQuestions);
-      onQuizGenerated(demoQuestions);
-      toast.warning(`Couldn't connect to the API. Generated demo questions instead.`);
+      toast.error('Failed to generate quiz. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -133,97 +73,13 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
-      // Map the application's question type to the API's question type format
-      let apiQuestionType;
-      if (settings.questionTypes === 'multiple-choice') {
-        apiQuestionType = 'multiple_choice';
-      } else if (settings.questionTypes === 'true-false') {
-        apiQuestionType = 'true_false';
-      } else if (settings.questionTypes === 'fill-in-the-blank') {
-        apiQuestionType = 'fill_in_the_blank';
-      } else if (settings.questionTypes === 'short-answer') {
-        apiQuestionType = 'short_answer';
-      } else if (settings.questionTypes === 'matching') {
-        apiQuestionType = 'matching';
-      } else {
-        apiQuestionType = 'mixed';
-      }
-
-      if (file.type === 'text/plain') {
-        // If it's plain text, read its contents & call the API
-        const textContent = await file.text();
-        
-        const response = await fetch(`${baseUrl}/generate-file-quiz`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: textContent,
-            num_questions: settings.questionCount,
-            num_options: settings.answerOptions,
-            question_type: apiQuestionType,
-            difficulty: settings.difficulty
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        if (data.questions) {
-          const questions = convertApiResponsesToQuestions(data.questions);
-          setCurrentQuiz(questions);
-          onQuizGenerated(questions);
-          toast.success(`Generated ${questions.length} questions from your text file!`);
-        } else {
-          throw new Error('Invalid response from quiz generation API');
-        }
-      } else {
-        // For other file types, use FormData
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('num_questions', settings.questionCount.toString());
-        formData.append('num_options', settings.answerOptions.toString());
-        formData.append('question_type', apiQuestionType);
-        formData.append('difficulty', settings.difficulty);
-
-        console.log("Sending file to API:", baseUrl);
-        console.log("File being sent:", file.name, file.type, file.size);
-
-        const response = await fetch(`${baseUrl}/generate-file-quiz`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Error response from API:", errorText);
-          throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        if (data.questions) {
-          const questions = convertApiResponsesToQuestions(data.questions);
-          setCurrentQuiz(questions);
-          onQuizGenerated(questions);
-          toast.success(`Generated ${questions.length} questions from your file!`);
-        } else {
-          throw new Error('Invalid response from quiz generation API');
-        }
-      }
+      const questions = await generateQuizFromFile(file, settings);
+      setCurrentQuiz(questions);
+      onQuizGenerated(questions);
+      toast.success(`Generated ${questions.length} questions from your file!`);
     } catch (error) {
       console.error('Error generating quiz from file:', error);
-      // fallback to demo
-      const demoQuestions = await generateDemoQuestions(
-        file.name,
-        settings.questionCount,
-        settings.answerOptions,
-        settings.questionTypes,
-        settings.difficulty
-      );
-      setCurrentQuiz(demoQuestions);
-      onQuizGenerated(demoQuestions);
-      toast.warning(`Couldn't process the file. Generated demo questions instead.`);
+      toast.error('Failed to generate quiz from file. Please try again.');
     } finally {
       setIsUploading(false);
       setIsGenerating(false);
