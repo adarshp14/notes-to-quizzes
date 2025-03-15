@@ -4,12 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Question, Answer, MatchItem, QuestionType } from '@/utils/quizUtils';
+import { Question, Answer, QuestionType } from '@/utils/quizUtils';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
 
 interface QuizCardProps {
   question: Question;
@@ -93,45 +92,45 @@ const QuizCard: React.FC<QuizCardProps> = ({
     
     const items = question.options;
     
+    // For matching questions, we create a set of numbered matches (1, 2, 3, 4, etc.)
     const matches = Array.from({ length: items.length }, (_, i) => `${i + 1}`);
     
     return { items, matches };
   };
 
-  const { items, matches } = question.type === 'matching' ? generateMatches() : { items: [], matches: [] };
-
-  // This function handles rendering different question types, including mixed types
-  const renderQuestionContent = (questionToRender: Question = question) => {
-    // Determine the effective question type
-    let effectiveType = questionToRender.type;
-    
-    // Handle mixed type logic
-    if (effectiveType === 'mixed') {
-      // Check for true/false questions
-      if (questionToRender.answers.length === 2 && 
-          questionToRender.answers.some(a => a.text === 'True') && 
-          questionToRender.answers.some(a => a.text === 'False')) {
-        effectiveType = 'true-false';
-      } 
-      // Check for matching questions
-      else if (questionToRender.correctMatching) {
-        effectiveType = 'matching';
-      }
-      // Check for fill-in-the-blank questions 
-      else if (questionToRender.text.includes('_____')) {
-        effectiveType = 'fill-in-the-blank';
-      }
-      // Check for short answer questions
-      else if (questionToRender.answers.length === 1) {
-        effectiveType = 'short-answer';
-      }
-      // Default to multiple-choice
-      else {
-        effectiveType = 'multiple-choice';
-      }
+  // Determine the effective question type - convert any mixed type to a specific type
+  const determineEffectiveType = (questionObj: Question): QuestionType => {
+    if (questionObj.type !== 'mixed') {
+      return questionObj.type;
     }
     
-    // Now render based on the effective type
+    // Determine which type a mixed question really is
+    if (questionObj.answers.length === 2 && 
+        questionObj.answers.some(a => a.text === 'True') && 
+        questionObj.answers.some(a => a.text === 'False')) {
+      return 'true-false';
+    } 
+    
+    if (questionObj.correctMatching) {
+      return 'matching';
+    }
+    
+    if (questionObj.text.includes('_____')) {
+      return 'fill-in-the-blank';
+    }
+    
+    if (questionObj.answers.length === 1) {
+      return 'short-answer';
+    }
+    
+    return 'multiple-choice';
+  };
+
+  // This function renders different question types
+  const renderQuestionContent = (questionToRender: Question = question) => {
+    // Get the effective question type (resolving 'mixed' types)
+    const effectiveType = determineEffectiveType(questionToRender);
+    
     switch (effectiveType) {
       case 'multiple-choice':
         return (
@@ -272,6 +271,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
         );
       
       case 'matching':
+        const { items, matches } = generateMatches();
         return (
           <div className="space-y-4">
             <div className="p-4 border rounded-lg bg-gray-50">
@@ -362,7 +362,9 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'fill-in-the-blank': return 'Fill in the Blank';
       case 'short-answer': return 'Short Answer';
       case 'matching': return 'Matching';
-      case 'mixed': return 'Mixed';
+      case 'mixed': 
+        // For mixed type, show the effective type in display
+        return getQuestionTypeDisplay(determineEffectiveType(question));
       default: return type.charAt(0).toUpperCase() + type.slice(1).replace(/-/g, ' ');
     }
   };

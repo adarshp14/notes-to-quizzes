@@ -21,25 +21,28 @@ const TakeQuiz = () => {
   const [isEvaluating, setIsEvaluating] = useState(false);
 
   useEffect(() => {
-    // Check if we have questions in the location state
     if (location.state?.questions) {
       setIsLoading(true);
       const receivedQuestions = location.state.questions as Question[];
       
-      // Process questions to ensure proper type handling, especially for mixed types
       const processedQuestions = receivedQuestions.map(question => {
-        // Handle question type mapping - convert API types to our app types
-        let type = question.type;
-        
-        if (question.type === 'mixed') {
-          // Keep mixed type but ensure proper answer structure
-          // The UI component will determine how to render it
+        if (question.answers.length === 2 && 
+            question.answers.some(a => a.text === 'True') && 
+            question.answers.some(a => a.text === 'False')) {
+          return { ...question, type: 'true-false' };
         }
         
-        // Ensure all questions have a correct answer marked
+        if (question.correctMatching && 
+            /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correctMatching)) {
+          return { ...question, type: 'matching' };
+        }
+        
+        if (question.type === 'mixed') {
+          return question;
+        }
+        
         const hasCorrectAnswer = question.answers.some(answer => answer.isCorrect);
         
-        // If no correct answer is marked, mark the first one as correct
         if (!hasCorrectAnswer && question.answers.length > 0) {
           const updatedAnswers = [...question.answers];
           updatedAnswers[0] = { ...updatedAnswers[0], isCorrect: true };
@@ -51,7 +54,6 @@ const TakeQuiz = () => {
       
       setQuestions(processedQuestions);
       
-      // Initialize userAnswers with null values
       const initialAnswers: Record<string, string | null> = {};
       processedQuestions.forEach(q => {
         initialAnswers[q.id] = null;
@@ -59,31 +61,26 @@ const TakeQuiz = () => {
       setUserAnswers(initialAnswers);
       setIsLoading(false);
     } else {
-      // Redirect to create quiz if no questions are available
       toast.error("No quiz questions found. Redirecting to quiz creation.");
       navigate('/create');
     }
   }, [location.state, navigate]);
 
-  // Handle selecting an answer - just stores the selection
   const handleAnswerSelect = (answerId: string) => {
     if (questions.length === 0 || showResults) return;
     
     const currentQuestion = questions[currentQuestionIndex];
     
-    // Store user's answer without immediate evaluation
     setUserAnswers(prev => ({
       ...prev,
       [currentQuestion.id]: answerId
     }));
   };
 
-  // Handle moving to the next question
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // End of quiz - now we evaluate all answers
       setIsEvaluating(true);
       evaluateQuiz();
       setShowResults(true);
@@ -91,34 +88,24 @@ const TakeQuiz = () => {
     }
   };
 
-  // Evaluate all answers at the end of the quiz
   const evaluateQuiz = () => {
-    // For text-based and matching questions, we need to perform evaluation
-    // This is now done in bulk at the end of the quiz
     const evaluatedAnswers = { ...userAnswers };
     
     questions.forEach(question => {
       const userAnswer = evaluatedAnswers[question.id];
       
-      // Skip questions that have no answer selected
       if (!userAnswer) return;
       
-      // For text-based questions, evaluate against correct answer
       if ((question.type === 'short-answer' || question.type === 'fill-in-the-blank') && 
           userAnswer !== 'incorrect') {
         const correctAnswer = question.answers.find(a => a.isCorrect);
         if (correctAnswer) {
-          // Simple string comparison - could be improved with more sophisticated matching
           const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.text.trim().toLowerCase();
           evaluatedAnswers[question.id] = isCorrect ? correctAnswer.id : 'incorrect';
         }
       }
       
-      // For matching questions, evaluate the matching pattern
-      if ((question.type === 'matching' || 
-           (question.type === 'mixed' && question.correctMatching)) && 
-          userAnswer !== 'incorrect' && question.correctMatching) {
-        // Compare the user's matching string with the correct matching pattern
+      if (question.type === 'matching' && question.correctMatching && userAnswer !== 'incorrect') {
         const isCorrect = compareMatchingAnswers(userAnswer, question.correctMatching);
         
         const correctAnswer = question.answers.find(a => a.isCorrect);
@@ -132,14 +119,13 @@ const TakeQuiz = () => {
     setIsEvaluating(false);
   };
 
-  // Helper function to compare matching answers
   const compareMatchingAnswers = (userMatching: string, correctMatching: string): boolean => {
-    // Normalize the strings by removing spaces and converting to lowercase
-    const normalizeMatching = (matchStr: string) => 
-      matchStr.split(',')
+    const normalizeMatching = (matchStr: string) => {
+      return matchStr.split(',')
         .map(pair => pair.trim().toLowerCase())
         .sort()
         .join(',');
+    };
     
     const normalizedUser = normalizeMatching(userMatching);
     const normalizedCorrect = normalizeMatching(correctMatching);
@@ -147,16 +133,13 @@ const TakeQuiz = () => {
     return normalizedUser === normalizedCorrect;
   };
 
-  // Handle moving to the previous question
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
-  // Restart the quiz
   const handleRestartQuiz = () => {
-    // Reset all states
     const initialAnswers: Record<string, string | null> = {};
     questions.forEach(q => {
       initialAnswers[q.id] = null;
@@ -169,7 +152,6 @@ const TakeQuiz = () => {
     toast.success("Quiz restarted. Good luck!");
   };
 
-  // Return to create page
   const handleBackToCreate = () => {
     navigate('/create');
   };

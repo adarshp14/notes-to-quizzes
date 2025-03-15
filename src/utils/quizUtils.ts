@@ -75,7 +75,7 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         questionType = 'multiple-choice';
     }
     
-    // For true/false questions, ensure we set the correct type regardless of API type
+    // Special detection of true/false questions based on content
     if ((apiQ.correct_answer === 'True' || apiQ.correct_answer === 'False') &&
         (apiQ.options?.length === 2 && 
          apiQ.options.includes('True') && 
@@ -83,9 +83,11 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       questionType = 'true-false';
     }
     
-    // For matching questions, check for matching pattern in correct_answer
-    if (apiQ.correct_answer && 
-        /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(apiQ.correct_answer)) {
+    // Special detection of matching questions based on correct_answer pattern
+    const isMatchingPattern = apiQ.correct_answer && 
+        /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(apiQ.correct_answer);
+    
+    if (isMatchingPattern) {
       questionType = 'matching';
     }
     
@@ -156,8 +158,18 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       
       // Ensure at least one answer is marked as correct
       if (!answers.some(a => a.isCorrect) && answers.length > 0) {
-        const correctAnswerIndex = Math.floor(Math.random() * answers.length);
-        answers[correctAnswerIndex].isCorrect = true;
+        // If the correct_answer exists but doesn't match options, add it
+        if (apiQ.correct_answer && !options.includes(apiQ.correct_answer)) {
+          answers.push({
+            id: generateId(),
+            text: apiQ.correct_answer,
+            isCorrect: true
+          });
+        } else {
+          // Otherwise, mark the first answer as correct
+          const correctAnswerIndex = Math.floor(Math.random() * answers.length);
+          answers[correctAnswerIndex].isCorrect = true;
+        }
       }
     }
 
