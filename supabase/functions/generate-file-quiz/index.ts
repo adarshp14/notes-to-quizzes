@@ -57,22 +57,26 @@ serve(async (req) => {
           /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correct_answer)) {
         question.question_type = "matching";
         
-        // If options don't exist, create placeholder options for matching
+        // If options don't exist, create proper options for matching
         if (!question.options || question.options.length === 0) {
-          const matchCount = (question.correct_answer.match(/[a-z]-\d+/gi) || []).length;
-          question.options = Array.from({ length: matchCount }, (_, i) => 
+          // For matching questions, we need both items to match and their matches
+          // Creating example items (left side)
+          const matchCount = Math.min((question.correct_answer.match(/[a-z]-\d+/gi) || []).length, 4);
+          const leftItems = Array.from({ length: matchCount }, (_, i) => 
             `Item ${String.fromCharCode(97 + i)}`
           );
+          
+          question.options = leftItems;
         }
         
-        // Ensure the correct matching answer has actual matching pairs
-        // This helps with proper frontend rendering
+        // Ensure the correct matching answer has actual matching pairs with proper format
         if (question.options && question.options.length > 0) {
           const matchPairs = [];
-          const letterCount = Math.min(question.options.length, 5);  // Limit to 5 pairs max
+          const itemCount = Math.min(question.options.length, 4); // Limit to 4 pairs max for UI clarity
           
-          for (let i = 0; i < letterCount; i++) {
+          for (let i = 0; i < itemCount; i++) {
             const letter = String.fromCharCode(97 + i);
+            // Random matching but ensure each number is used only once
             const number = (i + 1).toString();
             matchPairs.push(`${letter}-${number}`);
           }
@@ -253,22 +257,39 @@ function generateQuestions(
       });
     }
     else if (actualType === "matching") {
-      // Matching question
-      const matchingQuestion = `Match the following terms with their correct definitions:`;
+      // Matching question - let's create a more realistic example
+      if (topic === "artificial intelligence" || topic.includes("ai")) {
+        questionText = `Match the job title with its area of AI expertise.`;
+      } else if (topic.includes("data") || topic.includes("science")) {
+        questionText = `Match the data tool with its primary function.`;
+      } else {
+        questionText = `Match the following terms related to ${topic} with their definitions:`;
+      }
       
-      // For demonstration, we'll create a simple matching representation
-      const matchTerms = ['Term A', 'Term B', 'Term C', 'Term D'].slice(0, Math.min(4, options));
-      const correctMatching = `${matchTerms.join(', ')} matched with their correct definitions`;
+      // Create the matching items (typically 4 items to match)
+      const numItems = Math.min(4, options);
       
-      const incorrectOptions = Array(options - 1).fill(0).map((_, idx) => 
-        `Incorrect matching option ${idx + 1}`
-      );
+      // Create an array of left-side items
+      const matchItems = [];
+      for (let j = 0; j < numItems; j++) {
+        matchItems.push(`${topic.charAt(0).toUpperCase() + topic.slice(1)} term ${j+1}`);
+      }
+      
+      // Create the correct matching pattern (e.g., "a-2, b-1, c-4, d-3")
+      const numbers = Array.from({length: numItems}, (_, i) => i + 1);
+      // Shuffle the numbers for random matching
+      const shuffledNumbers = [...numbers].sort(() => Math.random() - 0.5);
+      
+      const correctMatching = matchItems.map((_, index) => {
+        const letter = String.fromCharCode(97 + index);
+        return `${letter}-${shuffledNumbers[index]}`;
+      }).join(", ");
       
       questions.push({
-        question: matchingQuestion,
-        options: [correctMatching, ...incorrectOptions],
+        question: questionText,
+        options: matchItems,
         correct_answer: correctMatching,
-        explanation: `This matching question tests your understanding of terminology related to ${topic}.`,
+        explanation: `This matching question tests your knowledge of terminology related to ${topic}.`,
         question_type: "matching"
       });
     }

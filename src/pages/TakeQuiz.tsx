@@ -57,7 +57,7 @@ const TakeQuiz = () => {
     }
   }, [location.state, navigate]);
 
-  // Handle selecting an answer - now just stores the selection without evaluation
+  // Handle selecting an answer - just stores the selection
   const handleAnswerSelect = (answerId: string) => {
     if (questions.length === 0 || showResults) return;
     
@@ -108,15 +108,33 @@ const TakeQuiz = () => {
       
       // For matching questions, evaluate the matching pattern
       if (question.type === 'matching' && userAnswer !== 'incorrect' && question.correctMatching) {
+        // Compare the user's matching string with the correct matching pattern
+        const isCorrect = compareMatchingAnswers(userAnswer, question.correctMatching);
+        
         const correctAnswer = question.answers.find(a => a.isCorrect);
         if (correctAnswer) {
-          evaluatedAnswers[question.id] = userAnswer === correctAnswer.id ? correctAnswer.id : 'incorrect';
+          evaluatedAnswers[question.id] = isCorrect ? correctAnswer.id : 'incorrect';
         }
       }
     });
     
     setUserAnswers(evaluatedAnswers);
     setIsEvaluating(false);
+  };
+
+  // Helper function to compare matching answers
+  const compareMatchingAnswers = (userMatching: string, correctMatching: string): boolean => {
+    // Normalize the strings by removing spaces and converting to lowercase
+    const normalizeMatching = (matchStr: string) => 
+      matchStr.split(',')
+        .map(pair => pair.trim().toLowerCase())
+        .sort()
+        .join(',');
+    
+    const normalizedUser = normalizeMatching(userMatching);
+    const normalizedCorrect = normalizeMatching(correctMatching);
+    
+    return normalizedUser === normalizedCorrect;
   };
 
   // Handle moving to the previous question

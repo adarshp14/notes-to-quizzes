@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
@@ -38,41 +37,34 @@ const QuizCard: React.FC<QuizCardProps> = ({
   const correctAnswer = question.answers.find(a => a.isCorrect);
   const isCorrect = userAnswer && correctAnswer?.id === userAnswer;
   
-  // Reset state when question changes
   useEffect(() => {
     setTextAnswer('');
     setMatchSelections({});
     setShowExplanation(false);
   }, [question.id]);
   
-  // Animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
     exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
   };
 
-  // Handle text input for short answer and fill-in-the-blank questions
   const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setTextAnswer(e.target.value);
     
     if (question.answers.length > 0) {
-      // Just store the text answer - evaluation happens on submit
       onAnswerSelect(e.target.value);
     }
   };
 
-  // Handle matching selection change
   const handleMatchChange = (item: string, value: string) => {
     const newSelections = { ...matchSelections, [item]: value };
     setMatchSelections(newSelections);
     
-    // Check if all matches are made
     if (question.options && question.options.length > 0) {
       const allMatchesMade = Object.keys(newSelections).length === question.options.length;
       
       if (allMatchesMade) {
-        // Format user's selections to match the correct format (e.g., "a-1, b-2, c-3")
         const userMatching = question.options
           .map((item, index) => {
             const letter = String.fromCharCode(97 + index);
@@ -81,13 +73,11 @@ const QuizCard: React.FC<QuizCardProps> = ({
           })
           .join(', ');
         
-        // Store the formatted matching string
         onAnswerSelect(userMatching);
       }
     }
   };
 
-  // Format the question text to highlight blanks for fill-in-the-blank questions
   const formatQuestionText = (text: string) => {
     if (question.type === 'fill-in-the-blank') {
       return text.replace(/___+/g, '_____');
@@ -95,23 +85,20 @@ const QuizCard: React.FC<QuizCardProps> = ({
     return text;
   };
 
-  // Generate matches for matching questions
   const generateMatches = () => {
     if (!question.options || question.options.length === 0) {
       return { items: [], matches: [] };
     }
     
     const items = question.options;
-    // For matching questions, generate sequential numbers as match options
+    
     const matches = Array.from({ length: items.length }, (_, i) => `${i + 1}`);
     
     return { items, matches };
   };
 
-  // Get the matching items and options
   const { items, matches } = question.type === 'matching' ? generateMatches() : { items: [], matches: [] };
 
-  // Render different question UI based on question type
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'multiple-choice':
@@ -260,7 +247,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
               
               {items.map((item, index) => (
                 <div key={index} className="mb-3 p-3 bg-white rounded border">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
                       <span className="font-medium text-indigo-700">{String.fromCharCode(97 + index)}</span>
                     </div>
@@ -273,11 +260,12 @@ const QuizCard: React.FC<QuizCardProps> = ({
                         <Select
                           onValueChange={(value) => handleMatchChange(item, value)}
                           value={matchSelections[item] || ""}
+                          disabled={showResults}
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full bg-white">
                             <SelectValue placeholder="Select a match..." />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white">
                             {matches.map((match, idx) => (
                               <SelectItem key={idx} value={match}>
                                 {match}
@@ -291,7 +279,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
                             <span className="font-medium">Correct match: </span>
                             {question.correctMatching && 
                              question.correctMatching.split(',').find(pair => pair.trim().startsWith(String.fromCharCode(97 + index)))
-                                ?.split('-')[1] || '?'}
+                                ?.split('-')[1]?.trim() || '?'}
                           </p>
                         </div>
                       )}
@@ -312,7 +300,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
                         <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                           <span className="font-medium text-green-700">{letter}</span>
                         </div>
-                        <span>{item}</span>
+                        <span className="text-gray-700">{item}</span>
                         <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />
                         <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
                           <span className="font-medium text-purple-700">{number}</span>
@@ -327,35 +315,19 @@ const QuizCard: React.FC<QuizCardProps> = ({
         );
       
       case 'mixed':
-        // For mixed questions, use the actual question type for rendering
-        // This is needed because 'mixed' is a category, not an actual question type
-        if (question.type === 'mixed' && question.answers.length > 0) {
-          // Determine actual type from answers or structure
-          let actualType = 'multiple-choice';
-          
-          if (question.answers.length === 2 && 
-              question.answers.some(a => a.text === 'True') && 
-              question.answers.some(a => a.text === 'False')) {
-            actualType = 'true-false';
-          } else if (question.correctMatching) {
-            actualType = 'matching';
-          } else if (question.text.includes('_____')) {
-            actualType = 'fill-in-the-blank';
-          } else if (question.answers.length === 1) {
-            actualType = 'short-answer';
-          }
-          
-          // Create a temporary question with the actual type
-          const typedQuestion = { ...question, type: actualType as any };
-          
-          // Render based on the actual type
-          return renderQuestionContent();
+        if (question.answers.length === 2 && 
+            question.answers.some(a => a.text === 'True') && 
+            question.answers.some(a => a.text === 'False')) {
+          return renderQuestionContent.call({ ...this, question: { ...question, type: 'true-false' } });
+        } else if (question.correctMatching) {
+          return renderQuestionContent.call({ ...this, question: { ...question, type: 'matching' } });
+        } else if (question.text.includes('_____')) {
+          return renderQuestionContent.call({ ...this, question: { ...question, type: 'fill-in-the-blank' } });
+        } else if (question.answers.length === 1) {
+          return renderQuestionContent.call({ ...this, question: { ...question, type: 'short-answer' } });
+        } else {
+          return renderQuestionContent.call({ ...this, question: { ...question, type: 'multiple-choice' } });
         }
-        return (
-          <div className="p-4 border rounded-lg">
-            <p className="text-gray-500">This mixed question type couldn't be determined.</p>
-          </div>
-        );
       
       default:
         return (
@@ -366,7 +338,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
-  // Get the type display name
   const getQuestionTypeDisplay = (type: string): string => {
     switch (type) {
       case 'multiple-choice': return 'Multiple Choice';
@@ -387,7 +358,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
       variants={cardVariants}
       className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden"
     >
-      {/* Question header with gradient background */}
       <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
         <div className="flex justify-between items-center mb-3">
           <Badge variant="outline" className="bg-white text-indigo-700 border-indigo-200 font-medium">
@@ -400,11 +370,9 @@ const QuizCard: React.FC<QuizCardProps> = ({
         <h3 className="text-xl font-medium text-gray-800">{formatQuestionText(question.text)}</h3>
       </div>
 
-      {/* Answer options */}
       <div className="p-6 space-y-4">
         {renderQuestionContent()}
 
-        {/* Explanation toggle */}
         {showResults && (
           <AnimatePresence>
             <motion.div
@@ -440,7 +408,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
         )}
       </div>
 
-      {/* Card footer */}
       <div className="p-4 border-t border-gray-100 flex justify-between bg-gray-50">
         <Button
           variant="outline"
