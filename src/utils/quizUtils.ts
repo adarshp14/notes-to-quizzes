@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -16,6 +17,8 @@ export interface Question {
   type: QuestionType;
   answers: Answer[];
   explanation?: string;
+  options?: string[];
+  matchItems?: string[];
 }
 
 export interface Quiz {
@@ -39,23 +42,65 @@ export const generateId = () => {
 
 export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
   return apiQuestions.map(apiQ => {
-    const questionType: QuestionType =
-      apiQ.question_type === 'true_false' ? 'true-false' : 'multiple-choice';
-
+    // Determine the question type
+    let questionType: QuestionType = 'multiple-choice';
+    
+    if (apiQ.question_type === 'true_false') {
+      questionType = 'true-false';
+    } else if (apiQ.question_type === 'fill_in_the_blank') {
+      questionType = 'fill-in-the-blank';
+    } else if (apiQ.question_type === 'short_answer') {
+      questionType = 'short-answer';
+    } else if (apiQ.question_type === 'matching') {
+      questionType = 'matching';
+    } else if (apiQ.question_type === 'multiple_choice') {
+      questionType = 'multiple-choice';
+    } else if (apiQ.question_type === 'mixed') {
+      questionType = 'mixed';
+    }
+    
+    // Detect matching questions by correct_answer pattern (e.g., "a-4, b-1, c-3, d-2")
+    if (apiQ.correct_answer && 
+        /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(apiQ.correct_answer)) {
+      questionType = 'matching';
+    }
+    
     const options = apiQ.options || [];
     
-    let answers: Answer[] = options.map(option => ({
-      id: generateId(),
-      text: option,
-      isCorrect: option === apiQ.correct_answer
-    }));
+    let answers: Answer[] = [];
     
-    if (answers.length === 0 && apiQ.correct_answer) {
-      answers = [{
+    // For matching questions, store the options as both options and answers
+    if (questionType === 'matching') {
+      // Create a single correct answer that contains the matching solution
+      answers.push({
         id: generateId(),
         text: apiQ.correct_answer,
         isCorrect: true
-      }];
+      });
+      
+      // If we don't have any options, create some placeholder options
+      if (options.length === 0 && apiQ.correct_answer) {
+        const matchCount = (apiQ.correct_answer.match(/[a-z]-\d+/gi) || []).length;
+        for (let i = 0; i < matchCount; i++) {
+          options.push(`Item ${String.fromCharCode(97 + i)}`);
+        }
+      }
+    } else {
+      // For non-matching questions, handle options normally
+      answers = options.map(option => ({
+        id: generateId(),
+        text: option,
+        isCorrect: option === apiQ.correct_answer
+      }));
+      
+      // If answers is empty but we have a correct_answer, add it as the only answer
+      if (answers.length === 0 && apiQ.correct_answer) {
+        answers = [{
+          id: generateId(),
+          text: apiQ.correct_answer,
+          isCorrect: true
+        }];
+      }
     }
 
     return {
@@ -63,6 +108,7 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       text: apiQ.question,
       type: questionType,
       answers,
+      options: options,  // Store the original options for rendering in matching questions
       explanation: apiQ.explanation
     };
   });

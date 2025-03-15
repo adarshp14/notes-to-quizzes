@@ -51,6 +51,12 @@ serve(async (req) => {
         question.question_type = "true_false";
       }
       
+      // Detect matching questions by correct_answer pattern (e.g., "a-4, b-1, c-3, d-2")
+      if (question.correct_answer && 
+          /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correct_answer)) {
+        question.question_type = "matching";
+      }
+      
       // If options is still null, initialize it as an empty array
       if (question.options === null) {
         if (question.correct_answer) {

@@ -8,6 +8,7 @@ import { Question, Answer } from '@/utils/quizUtils';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface QuizCardProps {
   question: Question;
@@ -32,6 +33,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
 }) => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [textAnswer, setTextAnswer] = useState('');
+  const [matchSelections, setMatchSelections] = useState<Record<string, string>>({});
   const correctAnswer = question.answers.find(a => a.isCorrect);
   const isCorrect = userAnswer && correctAnswer?.id === userAnswer;
   
@@ -51,6 +53,47 @@ const QuizCard: React.FC<QuizCardProps> = ({
       onAnswerSelect(question.answers[0].id);
     }
   };
+
+  // Handle matching selection change
+  const handleMatchChange = (item: string, value: string) => {
+    const newSelections = { ...matchSelections, [item]: value };
+    setMatchSelections(newSelections);
+    
+    // Once all matches are made, create a formatted answer string and submit
+    if (question.answers.length > 0) {
+      const allMatchesMade = Object.keys(newSelections).length === (question.matchItems?.length || 0);
+      if (allMatchesMade) {
+        onAnswerSelect(question.answers[0].id);
+      }
+    }
+  };
+
+  // Parse matching format (e.g., "a-4, b-1, c-3, d-2") to get items and options
+  const parseMatchingFormat = () => {
+    // Extract matching items and their correct matches from correct_answer if available
+    const matchingPairs: Array<{item: string, match: string}> = [];
+    const items: string[] = [];
+    const matches: string[] = [];
+
+    // Try to extract matching information from question text or correct answer
+    if (question.type === 'matching' && correctAnswer) {
+      // If the options array contains the items to match
+      if (question.answers.length > 0 && Array.isArray(question.options)) {
+        return {
+          items: question.options || [],
+          matches: question.options.map((_item, index) => `Option ${index + 1}`)
+        };
+      }
+    }
+
+    return {
+      items: items.length > 0 ? items : ['Item A', 'Item B', 'Item C', 'Item D'],
+      matches: matches.length > 0 ? matches : ['Match 1', 'Match 2', 'Match 3', 'Match 4']
+    };
+  };
+
+  // Get the matching items and options
+  const { items, matches } = question.type === 'matching' ? parseMatchingFormat() : { items: [], matches: [] };
 
   // Render different question UI based on question type
   const renderQuestionContent = () => {
@@ -148,10 +191,49 @@ const QuizCard: React.FC<QuizCardProps> = ({
         return (
           <div className="space-y-4">
             <div className="p-4 border rounded-lg bg-gray-50">
-              <p className="text-sm mb-4 text-gray-500">Match the items by selecting the correct pairs:</p>
+              <p className="text-sm mb-4 text-gray-500">Match each item with its correct option:</p>
               
-              {/* For now, we'll display matching as multiple choice */}
-              {question.answers.map((answer) => (
+              {/* For the case of matching, display the original options as items to match */}
+              {question.options && Array.isArray(question.options) && question.options.map((item, index) => (
+                <div key={index} className="mb-3 p-3 bg-white rounded border">
+                  <div className="mb-2">
+                    <span className="font-medium">{String.fromCharCode(97 + index)}) </span>
+                    <span>{item}</span>
+                  </div>
+                  
+                  {!showResults ? (
+                    <Select
+                      onValueChange={(value) => handleMatchChange(item, value)}
+                      value={matchSelections[item] || ""}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a match..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: question.options.length }, (_, i) => (
+                          <SelectItem key={i} value={String(i + 1)}>
+                            {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                      <p className="text-sm text-green-700">
+                        <span className="font-medium">Correct match: </span>
+                        {/* Extract the match from the correct_answer format if possible */}
+                        {correctAnswer && correctAnswer.text && correctAnswer.text.includes(String.fromCharCode(97 + index))
+                          ? correctAnswer.text.match(new RegExp(`${String.fromCharCode(97 + index)}-([0-9]+)`))?.at(1) || '?'
+                          : index + 1}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {/* If we only have regular multiple choice answers but it's labeled as matching */}
+              {(!question.options || !Array.isArray(question.options) || question.options.length === 0) && 
+               question.answers.map((answer) => (
                 <motion.div
                   key={answer.id}
                   initial={{ opacity: 0.8, y: 5 }}
@@ -188,6 +270,13 @@ const QuizCard: React.FC<QuizCardProps> = ({
                   </div>
                 </motion.div>
               ))}
+              
+              {showResults && correctAnswer && (
+                <div className="mt-4 p-3 bg-gray-50 rounded border">
+                  <p className="text-sm font-medium text-gray-700">Correct matching:</p>
+                  <p className="text-base text-green-700 whitespace-pre-line">{correctAnswer.text}</p>
+                </div>
+              )}
             </div>
           </div>
         );
