@@ -1,10 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from "@/lib/utils";
-import { FileText, Brain, Play, LogOut, User, LogIn } from 'lucide-react';
+import { FileText, Brain, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
   DropdownMenu,
@@ -14,12 +14,13 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const [scrollY, setScrollY] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   
   // Update scroll position
   useEffect(() => {
@@ -29,12 +30,12 @@ const Header = () => {
   }, []);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error('Error signing out');
-    } else {
+    try {
+      await signOut();
       toast.success('Signed out successfully');
       navigate('/');
+    } catch (error) {
+      toast.error('Error signing out');
     }
   };
 
@@ -130,12 +131,11 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            // This large blue button remains when no session is present
             <Link 
               to="/auth" 
               className="button-shine bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 shadow-sm"
             >
-              <LogIn className="w-4 h-4 mr-2" />
+              <User className="w-4 h-4 mr-2" />
               Sign In
             </Link>
           )}

@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Brain, Mail, LogIn, KeyRound, UserRound } from 'lucide-react';
+import { Brain, Mail, LogIn, KeyRound, UserRound, AlertCircle } from 'lucide-react';
 import { Provider } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { session } = useAuth();
   
@@ -28,28 +30,42 @@ const Auth = () => {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
-      const { error } = isSignUp 
-        ? await supabase.auth.signUp({ 
-            email, 
-            password,
-            options: {
-              emailRedirectTo: window.location.origin
-            }
-          })
-        : await supabase.auth.signInWithPassword({ email, password });
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
 
-      if (error) {
-        toast.error(error.message);
+        if (error) {
+          setErrorMessage(error.message);
+          toast.error(error.message);
+        } else {
+          toast.success('Account created successfully! Please check your email to confirm your registration.');
+        }
       } else {
-        toast.success(isSignUp ? 'Account created successfully!' : 'Logged in successfully!');
-        if (!isSignUp) {
+        const { error, data } = await supabase.auth.signInWithPassword({ 
+          email, 
+          password 
+        });
+
+        if (error) {
+          setErrorMessage(error.message);
+          toast.error(error.message);
+        } else if (data.user) {
+          toast.success('Logged in successfully!');
           navigate('/');
         }
       }
     } catch (error) {
-      toast.error('An error occurred during authentication');
+      const errorMsg = error instanceof Error ? error.message : 'An error occurred during authentication';
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +73,7 @@ const Auth = () => {
 
   const handleOAuthSignIn = async (provider: Provider) => {
     try {
+      setErrorMessage(null);
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -65,10 +82,13 @@ const Auth = () => {
       });
       
       if (error) {
+        setErrorMessage(error.message);
         toast.error(error.message);
       }
     } catch (error) {
-      toast.error('An error occurred during authentication');
+      const errorMsg = error instanceof Error ? error.message : 'An error occurred during authentication';
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -78,7 +98,7 @@ const Auth = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-lg"
+        className="w-full max-w-md space-y-6 bg-white p-8 rounded-2xl shadow-lg"
       >
         <div className="text-center">
           <div className="mx-auto w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6">
@@ -89,6 +109,13 @@ const Auth = () => {
             {isSignUp ? 'Sign up to start creating quizzes' : 'Sign in to your account'}
           </p>
         </div>
+
+        {errorMessage && (
+          <Alert variant="destructive" className="animate-fade-in">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4">
           <Button 
@@ -133,7 +160,7 @@ const Auth = () => {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-white px-2 text-muted-foreground">
-              Or continue with
+              Or continue with email
             </span>
           </div>
         </div>
@@ -173,17 +200,32 @@ const Auth = () => {
 
           <Button 
             type="submit" 
-            className="w-full py-6 text-base transition-all hover:scale-[1.02]" 
+            className="w-full py-6 text-base transition-all hover:scale-[1.02] bg-gradient-to-r from-primary to-primary/90" 
             disabled={isLoading}
           >
-            <LogIn className="mr-2 h-5 w-5" />
-            {isLoading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </div>
+            ) : (
+              <>
+                <LogIn className="mr-2 h-5 w-5" />
+                {isSignUp ? 'Sign Up' : 'Sign In'}
+              </>
+            )}
           </Button>
         </form>
 
         <div className="text-center pt-2">
           <button 
-            onClick={() => setIsSignUp(!isSignUp)} 
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setErrorMessage(null);
+            }} 
             className="text-sm text-primary hover:underline font-medium"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
