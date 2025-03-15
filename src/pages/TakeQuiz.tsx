@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -66,6 +67,13 @@ const TakeQuiz = () => {
       ...prev,
       [currentQuestion.id]: answerId
     }));
+    
+    // For text-based questions (short answer, fill-in-blank), provide feedback
+    if ((currentQuestion.type === 'short-answer' || currentQuestion.type === 'fill-in-the-blank') && 
+        answerId === 'incorrect') {
+      // If this is a custom-evaluated answer that's incorrect, show a toast
+      toast.info("Keep trying! Your answer isn't quite right.");
+    }
   };
 
   // Handle moving to the next question

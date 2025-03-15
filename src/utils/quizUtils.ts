@@ -11,6 +11,11 @@ export interface Answer {
   isCorrect: boolean;
 }
 
+export interface MatchItem {
+  item: string;
+  match: string;
+}
+
 export interface Question {
   id: string;
   text: string;
@@ -18,7 +23,8 @@ export interface Question {
   answers: Answer[];
   explanation?: string;
   options?: string[];
-  matchItems?: string[];
+  matchItems?: MatchItem[];
+  correctMatching?: string;
 }
 
 export interface Quiz {
@@ -65,12 +71,17 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       questionType = 'matching';
     }
     
+    // Ensure options is an array
     const options = apiQ.options || [];
     
     let answers: Answer[] = [];
+    let matchItems: MatchItem[] | undefined;
+    let correctMatching: string | undefined;
     
-    // For matching questions, store the options as both options and answers
+    // For matching questions, process the matching items
     if (questionType === 'matching') {
+      correctMatching = apiQ.correct_answer;
+      
       // Create a single correct answer that contains the matching solution
       answers.push({
         id: generateId(),
@@ -78,15 +89,54 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         isCorrect: true
       });
       
-      // If we don't have any options, create some placeholder options
-      if (options.length === 0 && apiQ.correct_answer) {
-        const matchCount = (apiQ.correct_answer.match(/[a-z]-\d+/gi) || []).length;
-        for (let i = 0; i < matchCount; i++) {
-          options.push(`Item ${String.fromCharCode(97 + i)}`);
-        }
+      // Process the matching pairs
+      if (options.length > 0) {
+        const matchPairs = apiQ.correct_answer.split(',').map(pair => pair.trim());
+        matchItems = options.map((item, index) => {
+          const matchPair = matchPairs.find(p => p.startsWith(String.fromCharCode(97 + index)));
+          const matchNumber = matchPair ? parseInt(matchPair.split('-')[1]) : index + 1;
+          
+          return {
+            item,
+            match: `Match ${matchNumber}`
+          };
+        });
       }
-    } else {
-      // For non-matching questions, handle options normally
+    } 
+    // For true/false questions, ensure there are exactly two options
+    else if (questionType === 'true-false') {
+      answers = [
+        {
+          id: generateId(),
+          text: 'True',
+          isCorrect: apiQ.correct_answer === 'True'
+        },
+        {
+          id: generateId(),
+          text: 'False',
+          isCorrect: apiQ.correct_answer === 'False'
+        }
+      ];
+    }
+    // For fill-in-the-blank, create a single answer
+    else if (questionType === 'fill-in-the-blank') {
+      answers = [{
+        id: generateId(),
+        text: apiQ.correct_answer,
+        isCorrect: true
+      }];
+    }
+    // For short-answer, create a single answer
+    else if (questionType === 'short-answer') {
+      answers = [{
+        id: generateId(),
+        text: apiQ.correct_answer,
+        isCorrect: true
+      }];
+    }
+    // For multiple-choice or other types
+    else {
+      // Map options to answers, marking the correct one
       answers = options.map(option => ({
         id: generateId(),
         text: option,
@@ -108,7 +158,9 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       text: apiQ.question,
       type: questionType,
       answers,
-      options: options,  // Store the original options for rendering in matching questions
+      options,
+      matchItems,
+      correctMatching,
       explanation: apiQ.explanation
     };
   });

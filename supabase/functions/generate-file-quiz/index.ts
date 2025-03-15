@@ -46,7 +46,8 @@ serve(async (req) => {
     questions.forEach(question => {
       // Fix true/false questions that might be incorrectly labeled
       if ((question.correct_answer === "True" || question.correct_answer === "False") && 
-          (question.options === null || question.options?.length === 0)) {
+          (question.options === null || question.options?.length === 0 || 
+           question.options?.length === 1 || question.question_type === "short_answer")) {
         question.options = ["True", "False"];
         question.question_type = "true_false";
       }
@@ -55,6 +56,14 @@ serve(async (req) => {
       if (question.correct_answer && 
           /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correct_answer)) {
         question.question_type = "matching";
+        
+        // If options don't exist, create placeholder options for matching
+        if (!question.options || question.options.length === 0) {
+          const matchCount = (question.correct_answer.match(/[a-z]-\d+/gi) || []).length;
+          question.options = Array.from({ length: matchCount }, (_, i) => 
+            `Item ${String.fromCharCode(97 + i)}`
+          );
+        }
       }
       
       // If options is still null, initialize it as an empty array
