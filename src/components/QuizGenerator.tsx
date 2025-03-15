@@ -10,7 +10,7 @@ import {
   createQuiz, 
   saveQuiz, 
   generatePDF,
-  generateDemoQuestions, // Add this import
+  generateDemoQuestions,
 } from '@/utils/quizUtils';
 import { generateQuizFromNotes, generateQuizFromFile } from '@/utils/quizAPI';
 import { QuizSettings } from './QuizCustomizer';
@@ -60,7 +60,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       
       if (questions.length === 0) {
         toast.error('No questions could be generated. Using demo questions instead.');
-        const demoQuestions = generateDemoQuestions(
+        // Await the demo questions Promise
+        const demoQuestions = await generateDemoQuestions(
           notes,
           settings.questionCount,
           settings.answerOptions,
@@ -80,16 +81,21 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       console.error('DEBUG - Error in handleGenerateFromNotes:', error);
       toast.error('Failed to generate quiz. Using demo questions instead.');
       
-      // Always fall back to demo questions on error
-      const demoQuestions = generateDemoQuestions(
-        notes,
-        settings.questionCount,
-        settings.answerOptions,
-        settings.questionTypes,
-        settings.difficulty
-      );
-      setCurrentQuiz(demoQuestions);
-      onQuizGenerated(demoQuestions);
+      try {
+        // Await the demo questions Promise
+        const demoQuestions = await generateDemoQuestions(
+          notes,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
+        setCurrentQuiz(demoQuestions);
+        onQuizGenerated(demoQuestions);
+      } catch (demoError) {
+        console.error('DEBUG - Error generating demo questions:', demoError);
+        toast.error('Failed to generate even demo questions. Please try again.');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -115,7 +121,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       
       if (questions.length === 0) {
         toast.error('No questions could be generated. Using demo questions instead.');
-        const demoQuestions = generateDemoQuestions(
+        // Await the demo questions Promise
+        const demoQuestions = await generateDemoQuestions(
           file.name,
           settings.questionCount,
           settings.answerOptions,
@@ -135,16 +142,21 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       console.error('DEBUG - Error in handleGenerateFromFile:', error);
       toast.error('Failed to generate quiz from file. Using demo questions instead.');
       
-      // Always fall back to demo questions on error
-      const demoQuestions = generateDemoQuestions(
-        file.name,
-        settings.questionCount,
-        settings.answerOptions,
-        settings.questionTypes,
-        settings.difficulty
-      );
-      setCurrentQuiz(demoQuestions);
-      onQuizGenerated(demoQuestions);
+      try {
+        // Await the demo questions Promise
+        const demoQuestions = await generateDemoQuestions(
+          file.name,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
+        setCurrentQuiz(demoQuestions);
+        onQuizGenerated(demoQuestions);
+      } catch (demoError) {
+        console.error('DEBUG - Error generating demo questions:', demoError);
+        toast.error('Failed to generate even demo questions. Please try again.');
+      }
     } finally {
       setIsUploading(false);
       setIsGenerating(false);
