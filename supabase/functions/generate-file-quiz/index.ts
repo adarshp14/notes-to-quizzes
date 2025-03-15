@@ -45,13 +45,20 @@ serve(async (req) => {
     // Ensure each question has a valid options array and correct question type
     questions.forEach(question => {
       // Fix true/false questions that might be incorrectly labeled
-      if ((question.correct_answer === "True" || question.correct_answer === "False")) {
+      if (question.question_type === "true_false" || 
+          (question.correct_answer === "True" || question.correct_answer === "False")) {
         question.options = ["True", "False"];
         question.question_type = "true_false";
       }
       
+      // Ensure true/false questions have both True and False options
+      if (question.question_type === "true_false" && 
+          (!question.options || !question.options.includes("True") || !question.options.includes("False"))) {
+        question.options = ["True", "False"];
+      }
+      
       // If options is still null, initialize it as an empty array
-      if (question.options === null) {
+      if (!question.options) {
         if (question.correct_answer) {
           // For short_answer or other types with a single correct answer but no options
           question.options = [question.correct_answer];
@@ -62,6 +69,7 @@ serve(async (req) => {
       
       // Ensure short_answer questions have at least the correct answer in options
       if (question.question_type === "short_answer" && 
+          question.correct_answer && 
           !question.options.includes(question.correct_answer)) {
         question.options.push(question.correct_answer);
       }
@@ -170,7 +178,7 @@ function generateQuestions(
       });
     } 
     else if (actualType === "true_false") {
-      // True/False question
+      // True/False question - always include both options
       const isTrue = Math.random() > 0.5;
       const statement = isTrue 
         ? `${topic} is a significant development in its field.` 
@@ -178,7 +186,7 @@ function generateQuestions(
       
       questions.push({
         question: statement,
-        options: ["True", "False"],
+        options: ["True", "False"],  // Always include both options
         correct_answer: isTrue ? "True" : "False",
         explanation: `This statement about ${topic} is ${isTrue ? "true" : "false"} because...`,
         question_type: "true_false"
