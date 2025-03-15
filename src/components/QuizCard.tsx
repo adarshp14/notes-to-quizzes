@@ -94,26 +94,26 @@ const QuizCard: React.FC<QuizCardProps> = ({
                   userAnswer === answer.id
                     ? showResults
                       ? isCorrect
-                        ? "border-green-500 bg-green-50"
-                        : "border-red-500 bg-red-50"
-                      : "border-indigo-500 bg-indigo-50"
+                        ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
+                        : "border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-600"
+                      : "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-600"
                     : showResults && answer.isCorrect
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
+                    ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
+                    : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                 )}
                 onClick={() => onAnswerSelect(answer.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-base font-medium">{answer.text}</p>
+                    <p className="text-base font-medium dark:text-gray-200">{answer.text}</p>
                   </div>
 
                   {showResults && (
                     <div className="ml-3 flex-shrink-0">
                       {answer.isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400" />
                       ) : userAnswer === answer.id ? (
-                        <XCircle className="w-5 h-5 text-red-500" />
+                        <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
                       ) : null}
                     </div>
                   )}
@@ -127,8 +127,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
         // Create standard true/false options if they don't exist
         if (!ensureTrueFalseOptions()) {
           return (
-            <div className="p-4 border rounded-lg">
-              <p className="text-red-500">This true/false question is incorrectly formatted.</p>
+            <div className="p-4 border rounded-lg dark:border-gray-700">
+              <p className="text-red-500 dark:text-red-400">This true/false question is incorrectly formatted.</p>
             </div>
           );
         }
@@ -153,26 +153,26 @@ const QuizCard: React.FC<QuizCardProps> = ({
                   userAnswer === answer.id
                     ? showResults
                       ? answer.isCorrect
-                        ? "border-green-500 bg-green-50"
-                        : "border-red-500 bg-red-50"
-                      : "border-indigo-500 bg-indigo-50"
+                        ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
+                        : "border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-600"
+                      : "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-600"
                     : showResults && answer.isCorrect
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
+                    ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
+                    : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                 )}
                 onClick={() => onAnswerSelect(answer.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-base font-medium">{answer.text}</p>
+                    <p className="text-base font-medium dark:text-gray-200">{answer.text}</p>
                   </div>
 
                   {showResults && (
                     <div className="ml-3 flex-shrink-0">
                       {answer.isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400" />
                       ) : userAnswer === answer.id ? (
-                        <XCircle className="w-5 h-5 text-red-500" />
+                        <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
                       ) : null}
                     </div>
                   )}
@@ -185,21 +185,21 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'fill-in-the-blank':
         return (
           <div className="space-y-4">
-            <div className="p-4 border rounded-lg">
-              <p className="mb-4 text-gray-600 italic">Fill in the blank with the correct answer:</p>
+            <div className="p-4 border rounded-lg dark:border-gray-700 dark:bg-gray-800/50">
+              <p className="mb-4 text-gray-600 dark:text-gray-400 italic">Fill in the blank with the correct answer:</p>
               <Input
                 type="text"
                 placeholder="Type your answer here..."
                 value={textAnswer}
                 onChange={handleTextInputChange}
-                className="w-full focus:ring-2 focus:ring-indigo-500"
+                className="w-full focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                 disabled={showResults}
               />
               
               {showResults && correctAnswer && (
-                <div className="mt-4 p-3 bg-gray-50 rounded border">
-                  <p className="text-sm font-medium text-gray-700">Correct answer:</p>
-                  <p className="text-base text-green-700">{correctAnswer.text}</p>
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Correct answer:</p>
+                  <p className="text-base text-green-700 dark:text-green-400">{correctAnswer.text}</p>
                 </div>
               )}
             </div>
@@ -209,20 +209,20 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'short-answer':
         return (
           <div className="space-y-4">
-            <div className="p-4 border rounded-lg">
-              <p className="mb-4 text-gray-600 italic">Provide a short answer to the question:</p>
+            <div className="p-4 border rounded-lg dark:border-gray-700 dark:bg-gray-800/50">
+              <p className="mb-4 text-gray-600 dark:text-gray-400 italic">Provide a short answer to the question:</p>
               <Textarea
                 placeholder="Type your answer here..."
                 value={textAnswer}
                 onChange={handleTextInputChange}
-                className="w-full min-h-[120px] focus:ring-2 focus:ring-indigo-500"
+                className="w-full min-h-[120px] focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                 disabled={showResults}
               />
               
               {showResults && correctAnswer && (
-                <div className="mt-4 p-3 bg-gray-50 rounded border">
-                  <p className="text-sm font-medium text-gray-700">Sample answer:</p>
-                  <p className="text-base text-green-700">{correctAnswer.text}</p>
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Sample answer:</p>
+                  <p className="text-base text-green-700 dark:text-green-400">{correctAnswer.text}</p>
                 </div>
               )}
             </div>
@@ -231,8 +231,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
       
       default:
         return (
-          <div className="p-4 border rounded-lg">
-            <p className="text-gray-500">This question type ({question.type}) is not supported.</p>
+          <div className="p-4 border rounded-lg dark:border-gray-700">
+            <p className="text-gray-500 dark:text-gray-400">This question type ({question.type}) is not supported.</p>
           </div>
         );
     }
@@ -254,21 +254,21 @@ const QuizCard: React.FC<QuizCardProps> = ({
       animate="visible"
       exit="exit"
       variants={cardVariants}
-      className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden"
+      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-md overflow-hidden"
     >
-      <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30">
         <div className="flex justify-between items-center mb-3">
-          <Badge variant="outline" className="bg-white text-indigo-700 border-indigo-200 font-medium">
+          <Badge variant="outline" className="bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 font-medium">
             Question {questionNumber} of {totalQuestions}
           </Badge>
-          <Badge variant="outline" className="capitalize bg-white text-purple-700 border-purple-200">
+          <Badge variant="outline" className="capitalize bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30">
             {getQuestionTypeDisplay(question.type)}
           </Badge>
         </div>
-        <h3 className="text-xl font-medium text-gray-800">{formatQuestionText(question.text)}</h3>
+        <h3 className="text-xl font-medium text-gray-800 dark:text-gray-200">{formatQuestionText(question.text)}</h3>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-4 dark:bg-gray-900">
         {renderQuestionContent()}
 
         {showResults && (
@@ -284,7 +284,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowExplanation(!showExplanation)}
-                className="w-full justify-start text-left border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                className="w-full justify-start text-left border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
@@ -296,7 +296,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-3 p-4 bg-indigo-50 rounded-lg text-sm text-gray-700 border border-indigo-100"
+                  className="mt-3 p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg text-sm text-gray-700 dark:text-gray-300 border border-indigo-100 dark:border-indigo-500/30"
                 >
                   {question.explanation}
                 </motion.div>
@@ -306,14 +306,14 @@ const QuizCard: React.FC<QuizCardProps> = ({
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-100 flex justify-between bg-gray-50">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-between bg-gray-50 dark:bg-gray-800">
         <Button
           variant="outline"
           size="sm"
           onClick={onPrevious}
           disabled={questionNumber === 1}
           className={cn(
-            "border-gray-300 hover:bg-gray-100",
+            "border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300",
             questionNumber === 1 && "opacity-50"
           )}
         >
@@ -326,8 +326,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
           onClick={onNext}
           disabled={!userAnswer && !showResults}
           className={cn(
-            userAnswer ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700" : 
-            "border-gray-300 hover:bg-gray-100",
+            userAnswer ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white" : 
+            "border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300",
             !userAnswer && !showResults && "opacity-50"
           )}
         >

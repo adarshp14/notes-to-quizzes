@@ -243,11 +243,11 @@ const TakeQuiz = () => {
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 mb-4"
             >
-              <Brain className="w-8 h-8 text-indigo-600 animate-pulse" />
+              <Brain className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-pulse" />
             </motion.div>
-            <h2 className="text-xl font-semibold mb-2">Loading quiz questions...</h2>
+            <h2 className="text-xl font-semibold mb-2 dark:text-gray-200">Loading quiz questions...</h2>
             <p className="text-muted-foreground">Please wait while we prepare your quiz.</p>
           </div>
         </main>
@@ -261,7 +261,7 @@ const TakeQuiz = () => {
         <Header />
         <main className="page-container mt-20">
           <div className="text-center">
-            <p>No questions available for this quiz. Please create a new quiz.</p>
+            <p className="dark:text-gray-300">No questions available for this quiz. Please create a new quiz.</p>
             <Button onClick={handleBackToCreate} className="mt-4 bg-indigo-600 hover:bg-indigo-700">
               Create New Quiz
             </Button>
@@ -285,14 +285,14 @@ const TakeQuiz = () => {
         >
           <Button 
             variant="ghost" 
-            className="mb-4 text-indigo-700 hover:bg-indigo-50" 
+            className="mb-4 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30" 
             onClick={handleBackToCreate}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Create
           </Button>
           
-          <h1 className="text-3xl font-bold mb-2 text-gray-800">Take Quiz</h1>
+          <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-200">Take Quiz</h1>
           {!quizCompleted && (
             <p className="text-muted-foreground">
               Complete the quiz by answering all questions. You can review your answers at the end.
@@ -309,7 +309,7 @@ const TakeQuiz = () => {
                 exit={{ opacity: 0 }}
                 className="text-center mb-4"
               >
-                <p className="text-indigo-600 font-medium">Evaluating your answers...</p>
+                <p className="text-indigo-600 dark:text-indigo-400 font-medium">Evaluating your answers...</p>
               </motion.div>
             )}
             {quizCompleted ? (
