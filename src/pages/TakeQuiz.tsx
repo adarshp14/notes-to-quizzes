@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,8 +26,17 @@ const TakeQuiz = () => {
       setIsLoading(true);
       const receivedQuestions = location.state.questions as Question[];
       
-      // Ensure all questions have a correct answer marked
-      const validatedQuestions = receivedQuestions.map(question => {
+      // Process questions to ensure proper type handling, especially for mixed types
+      const processedQuestions = receivedQuestions.map(question => {
+        // Handle question type mapping - convert API types to our app types
+        let type = question.type;
+        
+        if (question.type === 'mixed') {
+          // Keep mixed type but ensure proper answer structure
+          // The UI component will determine how to render it
+        }
+        
+        // Ensure all questions have a correct answer marked
         const hasCorrectAnswer = question.answers.some(answer => answer.isCorrect);
         
         // If no correct answer is marked, mark the first one as correct
@@ -41,11 +49,11 @@ const TakeQuiz = () => {
         return question;
       });
       
-      setQuestions(validatedQuestions);
+      setQuestions(processedQuestions);
       
       // Initialize userAnswers with null values
       const initialAnswers: Record<string, string | null> = {};
-      validatedQuestions.forEach(q => {
+      processedQuestions.forEach(q => {
         initialAnswers[q.id] = null;
       });
       setUserAnswers(initialAnswers);
@@ -107,7 +115,9 @@ const TakeQuiz = () => {
       }
       
       // For matching questions, evaluate the matching pattern
-      if (question.type === 'matching' && userAnswer !== 'incorrect' && question.correctMatching) {
+      if ((question.type === 'matching' || 
+           (question.type === 'mixed' && question.correctMatching)) && 
+          userAnswer !== 'incorrect' && question.correctMatching) {
         // Compare the user's matching string with the correct matching pattern
         const isCorrect = compareMatchingAnswers(userAnswer, question.correctMatching);
         

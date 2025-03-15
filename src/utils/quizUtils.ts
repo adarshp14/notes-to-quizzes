@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -48,79 +47,74 @@ export const generateId = () => {
 
 export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
   return apiQuestions.map(apiQ => {
-    // Determine the question type
-    let questionType: QuestionType = 'multiple-choice';
+    // Determine the question type based on API response
+    let questionType: QuestionType;
     
-    // First check the question_type field
-    if (apiQ.question_type === 'true_false') {
-      questionType = 'true-false';
-    } else if (apiQ.question_type === 'fill_in_the_blank') {
-      questionType = 'fill-in-the-blank';
-    } else if (apiQ.question_type === 'short_answer') {
-      questionType = 'short-answer';
-    } else if (apiQ.question_type === 'matching') {
-      questionType = 'matching';
-    } else if (apiQ.question_type === 'multiple_choice') {
-      questionType = 'multiple-choice';
-    } else if (apiQ.question_type === 'mixed') {
-      questionType = 'mixed';
+    // Map API question types to our app's question types
+    switch(apiQ.question_type) {
+      case 'true_false':
+        questionType = 'true-false';
+        break;
+      case 'fill_in_the_blank':
+        questionType = 'fill-in-the-blank';
+        break;
+      case 'short_answer':
+        questionType = 'short-answer';
+        break;
+      case 'matching':
+        questionType = 'matching';
+        break;
+      case 'multiple_choice':
+        questionType = 'multiple-choice';
+        break;
+      case 'mixed':
+        questionType = 'mixed';
+        break;
+      default:
+        // Default to multiple-choice if unknown
+        questionType = 'multiple-choice';
     }
     
-    // Next check for matching pattern in correct_answer regardless of question_type
+    // For true/false questions, ensure we set the correct type regardless of API type
+    if ((apiQ.correct_answer === 'True' || apiQ.correct_answer === 'False') &&
+        (apiQ.options?.length === 2 && 
+         apiQ.options.includes('True') && 
+         apiQ.options.includes('False'))) {
+      questionType = 'true-false';
+    }
+    
+    // For matching questions, check for matching pattern in correct_answer
     if (apiQ.correct_answer && 
         /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(apiQ.correct_answer)) {
       questionType = 'matching';
-    }
-    
-    // For true/false questions detected by correct_answer
-    if ((apiQ.correct_answer === 'True' || apiQ.correct_answer === 'False') &&
-        (questionType === 'short-answer' || !apiQ.options || apiQ.options.length <= 1)) {
-      questionType = 'true-false';
     }
     
     // Ensure options is an array
     const options = apiQ.options || [];
     
     let answers: Answer[] = [];
-    let matchItems: MatchItem[] | undefined;
     let correctMatching: string | undefined;
     
-    // For matching questions, process the matching items
+    // Process answers based on question type
     if (questionType === 'matching') {
       correctMatching = apiQ.correct_answer;
       
-      // Create a single correct answer that contains the matching solution
+      // Create correct answer for matching questions
       answers.push({
         id: generateId(),
         text: apiQ.correct_answer,
         isCorrect: true
       });
       
-      // Add some incorrect answers for the question
-      for (let i = 0; i < 2; i++) {
-        answers.push({
-          id: generateId(),
-          text: `Incorrect matching ${i + 1}`,
-          isCorrect: false
-        });
-      }
-      
-      // Process the matching pairs
-      if (options.length > 0) {
-        const matchPairs = apiQ.correct_answer.split(',').map(pair => pair.trim());
-        matchItems = options.map((item, index) => {
-          const matchPair = matchPairs.find(p => p.startsWith(String.fromCharCode(97 + index)));
-          const matchNumber = matchPair ? parseInt(matchPair.split('-')[1]) : index + 1;
-          
-          return {
-            item,
-            match: `Match ${matchNumber}`
-          };
-        });
-      }
+      // Add some incorrect matching patterns for variety
+      answers.push({
+        id: generateId(),
+        text: 'Incorrect matching pattern',
+        isCorrect: false
+      });
     } 
-    // For true/false questions, ensure there are exactly two options
     else if (questionType === 'true-false') {
+      // Create true/false answers
       answers = [
         {
           id: generateId(),
@@ -134,33 +128,25 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         }
       ];
     }
-    // For fill-in-the-blank, create a single answer
-    else if (questionType === 'fill-in-the-blank') {
+    else if (questionType === 'fill-in-the-blank' || questionType === 'short-answer') {
+      // Create a single correct answer
       answers = [{
         id: generateId(),
         text: apiQ.correct_answer,
         isCorrect: true
       }];
     }
-    // For short-answer, create a single answer
-    else if (questionType === 'short-answer') {
-      answers = [{
-        id: generateId(),
-        text: apiQ.correct_answer,
-        isCorrect: true
-      }];
-    }
-    // For multiple-choice or other types
     else {
-      // Map options to answers, marking the correct one
-      answers = options.map(option => ({
-        id: generateId(),
-        text: option,
-        isCorrect: option === apiQ.correct_answer
-      }));
-      
-      // If answers is empty but we have a correct_answer, add it as the only answer
-      if (answers.length === 0 && apiQ.correct_answer) {
+      // For multiple-choice or other types
+      if (options.length > 0) {
+        // Map options to answers, marking the correct one
+        answers = options.map(option => ({
+          id: generateId(),
+          text: option,
+          isCorrect: option === apiQ.correct_answer
+        }));
+      } else if (apiQ.correct_answer) {
+        // If no options but we have a correct answer, create it
         answers = [{
           id: generateId(),
           text: apiQ.correct_answer,
@@ -181,7 +167,6 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       type: questionType,
       answers,
       options,
-      matchItems,
       correctMatching,
       explanation: apiQ.explanation
     };

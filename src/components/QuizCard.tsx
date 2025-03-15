@@ -102,7 +102,37 @@ const QuizCard: React.FC<QuizCardProps> = ({
 
   // This function handles rendering different question types, including mixed types
   const renderQuestionContent = (questionToRender: Question = question) => {
-    switch (questionToRender.type) {
+    // Determine the effective question type
+    let effectiveType = questionToRender.type;
+    
+    // Handle mixed type logic
+    if (effectiveType === 'mixed') {
+      // Check for true/false questions
+      if (questionToRender.answers.length === 2 && 
+          questionToRender.answers.some(a => a.text === 'True') && 
+          questionToRender.answers.some(a => a.text === 'False')) {
+        effectiveType = 'true-false';
+      } 
+      // Check for matching questions
+      else if (questionToRender.correctMatching) {
+        effectiveType = 'matching';
+      }
+      // Check for fill-in-the-blank questions 
+      else if (questionToRender.text.includes('_____')) {
+        effectiveType = 'fill-in-the-blank';
+      }
+      // Check for short answer questions
+      else if (questionToRender.answers.length === 1) {
+        effectiveType = 'short-answer';
+      }
+      // Default to multiple-choice
+      else {
+        effectiveType = 'multiple-choice';
+      }
+    }
+    
+    // Now render based on the effective type
+    switch (effectiveType) {
       case 'multiple-choice':
         return (
           <div className="space-y-4">
@@ -315,42 +345,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
             </div>
           </div>
         );
-      
-      case 'mixed':
-        // Fixed approach: Create a modified question and pass it to renderQuestionContent
-        if (questionToRender.answers.length === 2 && 
-            questionToRender.answers.some(a => a.text === 'True') && 
-            questionToRender.answers.some(a => a.text === 'False')) {
-          const modifiedQuestion: Question = {
-            ...questionToRender,
-            type: 'true-false'
-          };
-          return renderQuestionContent(modifiedQuestion);
-        } else if (questionToRender.correctMatching) {
-          const modifiedQuestion: Question = {
-            ...questionToRender,
-            type: 'matching'
-          };
-          return renderQuestionContent(modifiedQuestion);
-        } else if (questionToRender.text.includes('_____')) {
-          const modifiedQuestion: Question = {
-            ...questionToRender,
-            type: 'fill-in-the-blank'
-          };
-          return renderQuestionContent(modifiedQuestion);
-        } else if (questionToRender.answers.length === 1) {
-          const modifiedQuestion: Question = {
-            ...questionToRender,
-            type: 'short-answer'
-          };
-          return renderQuestionContent(modifiedQuestion);
-        } else {
-          const modifiedQuestion: Question = {
-            ...questionToRender,
-            type: 'multiple-choice'
-          };
-          return renderQuestionContent(modifiedQuestion);
-        }
       
       default:
         return (
