@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,9 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
-  const baseUrl = import.meta.env.VITE_API_URL;
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  
+  console.log("API URL being used:", baseUrl);
 
   // -----------------------------
   // Generate from typed notes
@@ -70,7 +73,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         apiQuestionType = 'mixed';
       }
 
-      // Use either the Supabase edge function or local development endpoint
+      // Use the Supabase edge function URL
       const response = await fetch(`${baseUrl}/generate-file-quiz`, {
         method: 'POST',
         headers: {
@@ -184,13 +187,18 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         formData.append('question_type', apiQuestionType);
         formData.append('difficulty', settings.difficulty);
 
+        console.log("Sending file to API:", baseUrl);
+        console.log("File being sent:", file.name, file.type, file.size);
+
         const response = await fetch(`${baseUrl}/generate-file-quiz`, {
           method: 'POST',
           body: formData,
         });
 
         if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`);
+          const errorText = await response.text();
+          console.error("Error response from API:", errorText);
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
