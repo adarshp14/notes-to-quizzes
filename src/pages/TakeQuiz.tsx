@@ -58,52 +58,58 @@ const TakeQuiz = () => {
         if (isTrueFalseQuestion) {
           questionType = 'true-false';
           
-          // Ensure we have both True and False options
-          const trueAnswer = {
-            id: `tf-true-${generateId()}`,
-            text: 'True',
-            isCorrect: question.correct_answer === 'True'
+          // Always create both True and False answers for true/false questions
+          const answers = [
+            {
+              id: `tf-true-${index}`,
+              text: 'True',
+              isCorrect: question.correct_answer === 'True'
+            },
+            {
+              id: `tf-false-${index}`,
+              text: 'False',
+              isCorrect: question.correct_answer === 'False'
+            }
+          ];
+
+          // Return the question with properly formatted answers
+          return {
+            id: question.id || `${index + 1}`,
+            text: question.question || question.text,
+            type: 'true-false',
+            answers: answers,
+            explanation: question.explanation || ''
           };
-          
-          const falseAnswer = {
-            id: `tf-false-${generateId()}`,
-            text: 'False',
-            isCorrect: question.correct_answer === 'False'
-          };
-          
-          // Assign answers directly
-          question.answers = [trueAnswer, falseAnswer];
         } 
         else if (!question.answers || question.answers.length === 0) {
-          // Generate answers for questions without them
+          // Generate answers for non-true/false questions without them
           const options = question.options || [];
+          let answers = [];
           
           if (options.length > 0) {
-            question.answers = options.map((option: string, idx: number) => ({
+            answers = options.map((option: string, idx: number) => ({
               id: `${index}-${idx}`,
               text: option,
               isCorrect: option === question.correct_answer
             }));
           } else if (question.correct_answer) {
             // At least include the correct answer
-            question.answers = [{
+            answers = [{
               id: `${index}-0`,
               text: question.correct_answer,
               isCorrect: true
             }];
           } else {
             // Empty placeholder
-            question.answers = [{
+            answers = [{
               id: `${index}-0`,
               text: "No answer provided",
               isCorrect: true
             }];
           }
-        }
-        
-        // Make sure answers have proper IDs
-        if (question.answers) {
-          question.answers = question.answers.map((answer: any, aIdx: number) => {
+          
+          // Make sure answers have proper IDs
+          answers = answers.map((answer: any, aIdx: number) => {
             if (!answer.id) {
               return {
                 ...answer,
@@ -112,13 +118,33 @@ const TakeQuiz = () => {
             }
             return answer;
           });
+          
+          return { 
+            ...question, 
+            id: question.id || `${index + 1}`,
+            text: question.question || question.text,
+            type: questionType,
+            answers: answers
+          };
         }
+        
+        // For questions that already have answers array
+        const formattedAnswers = question.answers.map((answer: any, aIdx: number) => {
+          if (!answer.id) {
+            return {
+              ...answer,
+              id: `${index}-${aIdx}`
+            };
+          }
+          return answer;
+        });
         
         return { 
           ...question, 
           id: question.id || `${index + 1}`,
+          text: question.question || question.text,
           type: questionType,
-          answers: question.answers || []
+          answers: formattedAnswers
         };
       });
       

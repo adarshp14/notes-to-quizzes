@@ -128,7 +128,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
               <RadioGroupItem value="short-answer" id="short-answer" />
               <Label htmlFor="short-answer" className="cursor-pointer">Short Answer</Label>
             </div>
-            {/* Note: Matching and mixed options removed temporarily */}
+            {/* Note: Matching and mixed options removed */}
           </RadioGroup>
         </div>
         
