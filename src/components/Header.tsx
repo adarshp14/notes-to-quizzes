@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from "@/lib/utils";
-import { FileText, Brain, Play, LogOut, User, LogIn } from 'lucide-react';
+import { FileText, Brain, LogOut, LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import ThemeToggle from './ThemeToggle';
 
 const Header = () => {
   const [scrollY, setScrollY] = useState(0);
@@ -55,7 +57,7 @@ const Header = () => {
     <motion.header 
       className={cn(
         "fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300",
-        scrollY > 10 ? "glass shadow-sm border-b border-white/10" : ""
+        scrollY > 10 ? "glass shadow-sm border-b border-white/10 dark:border-white/5" : ""
       )}
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -82,8 +84,8 @@ const Header = () => {
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300",
                       location.pathname === item.path 
-                        ? "bg-primary text-white" 
-                        : "hover:bg-black/5 text-foreground/80 hover:text-foreground"
+                        ? "bg-primary text-white dark:bg-primary dark:text-primary-foreground" 
+                        : "hover:bg-black/5 dark:hover:bg-white/10 text-foreground/80 hover:text-foreground"
                     )}
                   >
                     {item.icon}
@@ -92,53 +94,63 @@ const Header = () => {
                 ))}
               </>
             )}
+            
+            {/* Theme Toggle */}
+            <ThemeToggle className="ml-2" />
           </nav>
 
           {/* User Menu / CTA */}
-          {session ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:bg-black/5 px-3 py-2 rounded-lg transition-colors">
-                  <Avatar className="h-8 w-8 transition-all border-2 border-transparent hover:border-primary/20">
-                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden sm:inline-block font-medium text-sm">
-                    {session.user.email?.split('@')[0] || 'User'}
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem asChild>
-                  <Link to="/create" className="cursor-pointer flex items-center">
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Create Quiz</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/quizzes" className="cursor-pointer flex items-center">
-                    <Brain className="mr-2 h-4 w-4" />
-                    <span>My Quizzes</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign Out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            // This large blue button remains when no session is present
-            <Link 
-              to="/auth" 
-              className="button-shine bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 shadow-sm"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Sign In
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Mobile Theme Toggle */}
+            <div className="md:hidden">
+              <ThemeToggle />
+            </div>
+            
+            {session ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 hover:bg-black/5 dark:hover:bg-white/10 px-3 py-2 rounded-lg transition-colors">
+                    <Avatar className="h-8 w-8 transition-all border-2 border-transparent hover:border-primary/20">
+                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline-block font-medium text-sm">
+                      {session.user.email?.split('@')[0] || 'User'}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link to="/create" className="cursor-pointer flex items-center">
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Create Quiz</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/quizzes" className="cursor-pointer flex items-center">
+                      <Brain className="mr-2 h-4 w-4" />
+                      <span>My Quizzes</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              // This large blue button remains when no session is present
+              <Link 
+                to="/auth" 
+                className="button-shine bg-primary hover:bg-primary/90 text-white dark:text-primary-foreground px-5 py-2 rounded-lg font-medium text-sm flex items-center transition-all duration-300 shadow-sm"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </motion.header>
