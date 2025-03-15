@@ -13,62 +13,26 @@ serve(async (req) => {
   }
 
   try {
-    // Check if it's a multipart form request
-    const contentType = req.headers.get("content-type") || "";
-    
-    let body;
-    let text = "";
-    let filename = "";
-    
-    if (contentType.includes("multipart/form-data")) {
-      // Handle multipart form data (file upload)
-      const formData = await req.formData();
-      const file = formData.get("file");
-      
-      if (file && file instanceof File) {
-        text = await file.text();
-        filename = file.name;
-      }
-      
-      // Get other form parameters
-      const questionCount = parseInt(formData.get("num_questions")?.toString() || "1", 10);
-      const answerOptions = parseInt(formData.get("num_options")?.toString() || "4", 10);
-      const questionType = formData.get("question_type")?.toString() || "multiple_choice";
-      const difficulty = formData.get("difficulty")?.toString() || "medium";
-      
-      body = { 
-        num_questions: questionCount, 
-        num_options: answerOptions, 
-        question_type: questionType, 
-        difficulty: difficulty,
-        text, 
-        filename 
-      };
-    } else {
-      // Handle regular JSON request
-      body = await req.json();
-    }
+    const body = await req.json();
     
     // Parse input parameters with defaults
-    const questionCount = body.num_questions || 5; // Default to 5 questions if not specified
+    const text = body.text || "";
+    const questionCount = body.num_questions || 5; // Default to 5 questions
     const answerOptions = body.num_options || 4;
     const questionType = body.question_type || "multiple_choice";
     const difficulty = body.difficulty || "medium";
-    text = body.text || text;
-    filename = body.filename || filename;
     
     console.log("Generating quiz with parameters:", { 
       questionCount, 
       answerOptions, 
       questionType, 
       difficulty,
-      textLength: text ? text.length : 0,
-      hasFilename: Boolean(filename)
+      textLength: text ? text.length : 0
     });
     
-    // Generate questions based on provided text or file
+    // Generate questions based on provided text
     const questions = generateQuestions(
-      text || filename, 
+      text, 
       questionCount, 
       answerOptions, 
       questionType, 
@@ -78,14 +42,14 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         questions,
-        source_text_summary: `Quiz generated from ${text ? "notes" : "file"} with ${questionCount} questions.`
+        source_text_summary: `Quiz generated from notes with ${questionCount} questions.`
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Error in generate-file-quiz function:", error);
+    console.error("Error in generate-text-quiz function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
