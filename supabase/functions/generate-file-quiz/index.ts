@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -41,9 +42,16 @@ serve(async (req) => {
       difficulty
     );
     
-    // Ensure each question has a valid options array
+    // Ensure each question has a valid options array and correct question type
     questions.forEach(question => {
-      // If options is null, initialize it as an empty array
+      // Fix true/false questions that might be incorrectly labeled
+      if ((question.correct_answer === "True" || question.correct_answer === "False") && 
+          (question.options === null || question.options?.length === 0)) {
+        question.options = ["True", "False"];
+        question.question_type = "true_false";
+      }
+      
+      // If options is still null, initialize it as an empty array
       if (question.options === null) {
         if (question.correct_answer) {
           // For short_answer or other types with a single correct answer but no options
@@ -51,6 +59,12 @@ serve(async (req) => {
         } else {
           question.options = [];
         }
+      }
+      
+      // Ensure short_answer questions have at least the correct answer in options
+      if (question.question_type === "short_answer" && 
+          !question.options.includes(question.correct_answer)) {
+        question.options.push(question.correct_answer);
       }
     });
     
