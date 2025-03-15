@@ -21,15 +21,25 @@ export const generateQuizFromNotes = async (
   settings: QuizSettings
 ): Promise<Question[]> => {
   try {
+    console.log("DEBUG - Starting generateQuizFromNotes");
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    // Get the API URL from environment variables
-    const apiUrl = import.meta.env.VITE_API_URL || '';
     
+    // Get the API URL from environment variables with proper fallback
+    const apiUrl = import.meta.env.VITE_API_URL;
+    
+    // Check if API URL is configured
     if (!apiUrl) {
-      console.error("DEBUG - No API URL configured");
-      throw new Error("API URL not configured");
+      console.error("DEBUG - No API URL configured, using fallback demo questions");
+      toast.error("API not configured. Using demo questions instead.");
+      return await generateDemoQuestions(
+        notes,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
     }
     
     // Direct API call to the text quiz endpoint
@@ -44,44 +54,91 @@ export const generateQuizFromNotes = async (
       difficulty: settings.difficulty
     });
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: notes,
-        num_questions: settings.questionCount,
-        num_options: settings.answerOptions,
-        question_type: apiQuestionType,
-        difficulty: settings.difficulty
-      }),
-    });
-
-    console.log("DEBUG - API Response status:", response.status, response.statusText);
+    // Set a reasonable timeout for the fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("DEBUG - Error response from API:", errorText);
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: notes,
+          num_questions: settings.questionCount,
+          num_options: settings.answerOptions,
+          question_type: apiQuestionType,
+          difficulty: settings.difficulty
+        }),
+        signal: controller.signal
+      });
+      
+      // Clear the timeout since the request completed
+      clearTimeout(timeoutId);
 
-    const data = await response.json();
-    console.log("DEBUG - API Response data:", data);
-    
-    if (data.questions && Array.isArray(data.questions)) {
-      if (data.questions.length === 0) {
-        console.log("DEBUG - API returned empty questions array, using fallback");
-        return [];
+      console.log("DEBUG - API Response status:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("DEBUG - Error response from API:", errorText);
+        toast.error(`API error: ${response.status} ${response.statusText}`);
+        console.log("DEBUG - Falling back to demo questions");
+        return await generateDemoQuestions(
+          notes,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
       }
-      return convertApiResponsesToQuestions(data.questions);
-    } else {
-      console.error("DEBUG - Invalid response structure:", data);
-      throw new Error('Invalid response from quiz generation API');
+
+      const data = await response.json();
+      console.log("DEBUG - API Response data:", data);
+      
+      if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+        return convertApiResponsesToQuestions(data.questions);
+      } else {
+        console.log("DEBUG - API returned empty or invalid questions array, using fallback");
+        toast.warning("Couldn't generate questions from your content. Using demo questions instead.");
+        return await generateDemoQuestions(
+          notes,
+          settings.questionCount,
+          settings.answerOptions,
+          settings.questionTypes,
+          settings.difficulty
+        );
+      }
+    } catch (fetchError: any) {
+      // Clear the timeout in case of error
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error("DEBUG - Request timed out");
+        toast.error("Request timed out. Using demo questions instead.");
+      } else {
+        console.error("DEBUG - Fetch error:", fetchError);
+        toast.error("Network error. Using demo questions instead.");
+      }
+      
+      return await generateDemoQuestions(
+        notes,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
     }
   } catch (error) {
     console.error('DEBUG - Error generating quiz from notes:', error);
-    throw error; // Propagate the error so the component can handle it
+    toast.error('Error generating quiz. Using demo questions instead.');
+    return await generateDemoQuestions(
+      notes,
+      settings.questionCount,
+      settings.answerOptions,
+      settings.questionTypes,
+      settings.difficulty
+    );
   }
 };
 
@@ -91,103 +148,173 @@ export const generateQuizFromFile = async (
   settings: QuizSettings
 ): Promise<Question[]> => {
   try {
+    console.log("DEBUG - Starting generateQuizFromFile");
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    // Get the API URL from environment variables
-    const apiUrl = import.meta.env.VITE_API_URL || '';
     
+    // Get the API URL from environment variables with proper fallback
+    const apiUrl = import.meta.env.VITE_API_URL;
+    
+    // Check if API URL is configured
     if (!apiUrl) {
-      console.error("DEBUG - No API URL configured");
-      throw new Error("API URL not configured");
+      console.error("DEBUG - No API URL configured, using fallback demo questions");
+      toast.error("API not configured. Using demo questions instead.");
+      return await generateDemoQuestions(
+        file.name,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
     }
     
-    // Direct API call to the file quiz endpoint
-    const endpoint = `${apiUrl}/generate-file-quiz`;
+    // Set a reasonable timeout for the fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
-    console.log("DEBUG - Calling API endpoint:", endpoint);
-    console.log("DEBUG - with file:", file.name, file.type, file.size);
+    try {
+      if (file.type === 'text/plain') {
+        // If it's plain text, read its contents & call the API
+        const textContent = await file.text();
+        
+        console.log("DEBUG - Sending text file content with length:", textContent.length);
+        
+        const endpoint = `${apiUrl}/generate-text-quiz`; // Use text endpoint for text files
+        
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: textContent,
+            num_questions: settings.questionCount,
+            num_options: settings.answerOptions,
+            question_type: apiQuestionType,
+            difficulty: settings.difficulty
+          }),
+          signal: controller.signal
+        });
+        
+        // Clear the timeout since the request completed
+        clearTimeout(timeoutId);
 
-    if (file.type === 'text/plain') {
-      // If it's plain text, read its contents & call the API
-      const textContent = await file.text();
-      
-      console.log("DEBUG - Sending text file content with length:", textContent.length);
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: textContent,
-          num_questions: settings.questionCount,
-          num_options: settings.answerOptions,
-          question_type: apiQuestionType,
-          difficulty: settings.difficulty
-        }),
-      });
-
-      console.log("DEBUG - API Response status:", response.status, response.statusText);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("DEBUG - Error response from API:", errorText);
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log("DEBUG - API Response data:", data);
-      
-      if (data.questions) {
-        if (data.questions.length === 0) {
-          console.log("DEBUG - API returned empty questions array, using fallback");
-          return [];
+        console.log("DEBUG - API Response status:", response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("DEBUG - Error response from API:", errorText);
+          toast.error(`API error: ${response.status} ${response.statusText}`);
+          console.log("DEBUG - Falling back to demo questions");
+          return await generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
         }
-        return convertApiResponsesToQuestions(data.questions);
-      } else {
-        console.error("DEBUG - Invalid response structure:", data);
-        throw new Error('Invalid response from quiz generation API');
-      }
-    } else {
-      // For other file types, use FormData
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('num_questions', settings.questionCount.toString());
-      formData.append('num_options', settings.answerOptions.toString());
-      formData.append('question_type', apiQuestionType);
-      formData.append('difficulty', settings.difficulty);
 
-      console.log("DEBUG - Sending file to API:", endpoint);
-      console.log("DEBUG - File being sent:", file.name, file.type, file.size);
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData,
-      });
-
-      console.log("DEBUG - API Response status:", response.status, response.statusText);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("DEBUG - Error response from API:", errorText);
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log("DEBUG - API Response data:", data);
-      
-      if (data.questions) {
-        if (data.questions.length === 0) {
-          console.log("DEBUG - API returned empty questions array, using fallback");
-          return [];
+        const data = await response.json();
+        console.log("DEBUG - API Response data:", data);
+        
+        if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+          return convertApiResponsesToQuestions(data.questions);
+        } else {
+          console.log("DEBUG - API returned empty or invalid questions array, using fallback");
+          toast.warning("Couldn't generate questions from your file. Using demo questions instead.");
+          return await generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
         }
-        return convertApiResponsesToQuestions(data.questions);
       } else {
-        console.error("DEBUG - Invalid response structure:", data);
-        throw new Error('Invalid response from quiz generation API');
+        // For other file types, use FormData and file endpoint
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('num_questions', settings.questionCount.toString());
+        formData.append('num_options', settings.answerOptions.toString());
+        formData.append('question_type', apiQuestionType);
+        formData.append('difficulty', settings.difficulty);
+
+        const endpoint = `${apiUrl}/generate-file-quiz`;
+        
+        console.log("DEBUG - Sending file to API:", endpoint);
+        console.log("DEBUG - File being sent:", file.name, file.type, file.size);
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+        
+        // Clear the timeout since the request completed
+        clearTimeout(timeoutId);
+
+        console.log("DEBUG - API Response status:", response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("DEBUG - Error response from API:", errorText);
+          toast.error(`API error: ${response.status} ${response.statusText}`);
+          console.log("DEBUG - Falling back to demo questions");
+          return await generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
+        }
+
+        const data = await response.json();
+        console.log("DEBUG - API Response data:", data);
+        
+        if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+          return convertApiResponsesToQuestions(data.questions);
+        } else {
+          console.log("DEBUG - API returned empty or invalid questions array, using fallback");
+          toast.warning("Couldn't generate questions from your file. Using demo questions instead.");
+          return await generateDemoQuestions(
+            file.name,
+            settings.questionCount,
+            settings.answerOptions,
+            settings.questionTypes,
+            settings.difficulty
+          );
+        }
       }
+    } catch (fetchError: any) {
+      // Clear the timeout in case of error
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error("DEBUG - Request timed out");
+        toast.error("Request timed out. Using demo questions instead.");
+      } else {
+        console.error("DEBUG - Fetch error:", fetchError);
+        toast.error("Network error. Using demo questions instead.");
+      }
+      
+      return await generateDemoQuestions(
+        file.name,
+        settings.questionCount,
+        settings.answerOptions,
+        settings.questionTypes,
+        settings.difficulty
+      );
     }
   } catch (error) {
     console.error('DEBUG - Error generating quiz from file:', error);
-    throw error; // Propagate the error so the component can handle it
+    toast.error('Error generating quiz. Using demo questions instead.');
+    return await generateDemoQuestions(
+      file.name,
+      settings.questionCount,
+      settings.answerOptions,
+      settings.questionTypes,
+      settings.difficulty
+    );
   }
 };
