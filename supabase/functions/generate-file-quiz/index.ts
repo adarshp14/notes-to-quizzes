@@ -13,16 +13,49 @@ serve(async (req) => {
   }
 
   try {
-    // Get the request body
-    const body = await req.json();
+    // Check if it's a multipart form request
+    const contentType = req.headers.get("content-type") || "";
+    
+    let body;
+    let text = "";
+    let filename = "";
+    
+    if (contentType.includes("multipart/form-data")) {
+      // Handle multipart form data (file upload)
+      const formData = await req.formData();
+      const file = formData.get("file");
+      
+      if (file && file instanceof File) {
+        text = await file.text();
+        filename = file.name;
+      }
+      
+      // Get other form parameters
+      const questionCount = parseInt(formData.get("num_questions")?.toString() || "1", 10);
+      const answerOptions = parseInt(formData.get("num_options")?.toString() || "4", 10);
+      const questionType = formData.get("question_type")?.toString() || "multiple_choice";
+      const difficulty = formData.get("difficulty")?.toString() || "medium";
+      
+      body = { 
+        num_questions: questionCount, 
+        num_options: answerOptions, 
+        question_type: questionType, 
+        difficulty: difficulty,
+        text, 
+        filename 
+      };
+    } else {
+      // Handle regular JSON request
+      body = await req.json();
+    }
     
     // Parse input parameters with defaults
     const questionCount = body.num_questions || 1; // Set minimum to 1
     const answerOptions = body.num_options || 4;
     const questionType = body.question_type || "multiple_choice";
     const difficulty = body.difficulty || "medium";
-    const text = body.text || "";
-    const filename = body.filename || "";
+    text = body.text || text;
+    filename = body.filename || filename;
     
     console.log("Generating quiz with parameters:", { 
       questionCount, 
@@ -191,17 +224,14 @@ function generateQuestions(
         `Potential developments in ${topic}`
       ];
       
-      // Add the matching pattern as an option
-      const optionsArray = [
-        `a) ${matchItems[0]} - 1) ${matchAnswers[0]}`,
-        `b) ${matchItems[1]} - 2) ${matchAnswers[1]}`,
-        `c) ${matchItems[2]} - 3) ${matchAnswers[2]}`,
-        `d) ${matchItems[3]} - 4) ${matchAnswers[3]}`
-      ];
-      
       questions.push({
         question: `Match the following terms related to ${topic}:`,
-        options: optionsArray,
+        options: [
+          `a) ${matchItems[0]} - 1) ${matchAnswers[0]}`,
+          `b) ${matchItems[1]} - 2) ${matchAnswers[1]}`,
+          `c) ${matchItems[2]} - 3) ${matchAnswers[2]}`,
+          `d) ${matchItems[3]} - 4) ${matchAnswers[3]}`
+        ],
         correct_answer: `a) 1, b) 2, c) 3, d) 4`,
         explanation: `These are the correct matches for terms related to ${topic}.`,
         question_type: "matching"

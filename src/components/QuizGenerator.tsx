@@ -70,7 +70,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         apiQuestionType = 'mixed';
       }
 
-      const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+      // Use either the Supabase edge function or local development endpoint
+      const response = await fetch(`${baseUrl}/generate-file-quiz`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -146,9 +147,10 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       }
 
       if (file.type === 'text/plain') {
-        // If it's plain text, read its contents & call /generate-text-quiz
+        // If it's plain text, read its contents & call the API
         const textContent = await file.text();
-        const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+        
+        const response = await fetch(`${baseUrl}/generate-file-quiz`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -174,7 +176,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
           throw new Error('Invalid response from quiz generation API');
         }
       } else {
-        // Otherwise, call /generate-file-quiz with FormData
+        // For other file types, use FormData
         const formData = new FormData();
         formData.append('file', file);
         formData.append('num_questions', settings.questionCount.toString());
