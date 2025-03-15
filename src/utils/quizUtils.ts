@@ -62,13 +62,11 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         questionType = 'short-answer';
         break;
       case 'matching':
-        questionType = 'matching';
+      case 'mixed':
+        questionType = 'multiple-choice';
         break;
       case 'multiple_choice':
         questionType = 'multiple-choice';
-        break;
-      case 'mixed':
-        questionType = 'mixed';
         break;
       default:
         // Default to multiple-choice if unknown
@@ -83,40 +81,14 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       questionType = 'true-false';
     }
     
-    // Special detection of matching questions based on correct_answer pattern
-    const isMatchingPattern = apiQ.correct_answer && 
-        /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(apiQ.correct_answer);
-    
-    if (isMatchingPattern) {
-      questionType = 'matching';
-    }
-    
     // Ensure options is an array
     const options = apiQ.options || [];
     
     let answers: Answer[] = [];
-    let correctMatching: string | undefined;
     
     // Process answers based on question type
-    if (questionType === 'matching') {
-      correctMatching = apiQ.correct_answer;
-      
-      // Create correct answer for matching questions
-      answers.push({
-        id: generateId(),
-        text: apiQ.correct_answer,
-        isCorrect: true
-      });
-      
-      // Add some incorrect matching patterns for variety
-      answers.push({
-        id: generateId(),
-        text: 'Incorrect matching pattern',
-        isCorrect: false
-      });
-    } 
-    else if (questionType === 'true-false') {
-      // Create true/false answers
+    if (questionType === 'true-false') {
+      // Create true/false answers - ensure both exist and only the correct one is marked
       answers = [
         {
           id: generateId(),
@@ -179,7 +151,6 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       type: questionType,
       answers,
       options,
-      correctMatching,
       explanation: apiQ.explanation
     };
   });

@@ -52,39 +52,6 @@ serve(async (req) => {
         question.question_type = "true_false";
       }
       
-      // Detect matching questions by correct_answer pattern (e.g., "a-4, b-1, c-3, d-2")
-      if (question.correct_answer && 
-          /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correct_answer)) {
-        question.question_type = "matching";
-        
-        // If options don't exist, create proper options for matching
-        if (!question.options || question.options.length === 0) {
-          // For matching questions, we need both items to match and their matches
-          // Creating example items (left side)
-          const matchCount = Math.min((question.correct_answer.match(/[a-z]-\d+/gi) || []).length, 4);
-          const leftItems = Array.from({ length: matchCount }, (_, i) => 
-            `Item ${String.fromCharCode(97 + i)}`
-          );
-          
-          question.options = leftItems;
-        }
-        
-        // Ensure the correct matching answer has actual matching pairs with proper format
-        if (question.options && question.options.length > 0) {
-          const matchPairs = [];
-          const itemCount = Math.min(question.options.length, 4); // Limit to 4 pairs max for UI clarity
-          
-          for (let i = 0; i < itemCount; i++) {
-            const letter = String.fromCharCode(97 + i);
-            // Random matching but ensure each number is used only once
-            const number = (i + 1).toString();
-            matchPairs.push(`${letter}-${number}`);
-          }
-          
-          question.correct_answer = matchPairs.join(", ");
-        }
-      }
-      
       // If options is still null, initialize it as an empty array
       if (question.options === null) {
         if (question.correct_answer) {
@@ -101,22 +68,9 @@ serve(async (req) => {
         question.options.push(question.correct_answer);
       }
       
-      // Special handling for mixed question type
-      if (question.question_type === "mixed") {
-        // Let's explicitly assign an actual question type based on the structure
-        const isTrue = question.correct_answer === "True";
-        const isFalse = question.correct_answer === "False";
-        
-        if (isTrue || isFalse) {
-          question.question_type = "true_false";
-          question.options = ["True", "False"];
-        } else if (question.question.includes("_____")) {
-          question.question_type = "fill_in_the_blank";
-        } else if (question.options && question.options.length > 2) {
-          question.question_type = "multiple_choice";
-        } else {
-          question.question_type = "short_answer";
-        }
+      // Temporarily convert mixed types to multiple-choice and ignore matching
+      if (question.question_type === "mixed" || question.question_type === "matching") {
+        question.question_type = "multiple_choice";
       }
     });
     
@@ -169,22 +123,23 @@ function generateQuestions(
     ? uniqueWords.slice(0, count * 2)
     : fallbackTopics;
   
-  // All supported question types
+  // All supported question types (temporarily removing matching and mixed)
   const questionTypes = [
     "multiple_choice", 
     "true_false", 
     "fill_in_the_blank", 
-    "short_answer", 
-    "matching"
+    "short_answer"
   ];
   
   for (let i = 0; i < count; i++) {
     const topicIndex = Math.floor(Math.random() * topics.length);
     const topic = topics[topicIndex] || fallbackTopics[i % fallbackTopics.length];
     
-    // Determine question type - either use specified type or mix
+    // Determine question type - use specified type or fallback to multiple choice
     let actualType = type;
-    if (type === "mixed") {
+    
+    // If type was previously "mixed", use a specific type from the reduced list
+    if (type === "mixed" || type === "matching") {
       actualType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
     }
     
@@ -256,48 +211,6 @@ function generateQuestions(
         question_type: "short_answer"
       });
     }
-    else if (actualType === "matching") {
-      // Matching question - let's create a more realistic example
-      if (topic === "artificial intelligence" || topic.includes("ai")) {
-        questionText = `Match the job title with its area of AI expertise.`;
-      } else if (topic.includes("data") || topic.includes("science")) {
-        questionText = `Match the data tool with its primary function.`;
-      } else {
-        questionText = `Match the following terms related to ${topic} with their definitions:`;
-      }
-      
-      // Create the matching items (typically 4 items to match)
-      const numItems = Math.min(4, options);
-      
-      // Create an array of left-side items
-      const matchItems = [];
-      for (let j = 0; j < numItems; j++) {
-        matchItems.push(`${topic.charAt(0).toUpperCase() + topic.slice(1)} term ${j+1}`);
-      }
-      
-      // Create the correct matching pattern (e.g., "a-2, b-1, c-4, d-3")
-      const numbers = Array.from({length: numItems}, (_, i) => i + 1);
-      // Shuffle the numbers for random matching
-      const shuffledNumbers = [...numbers].sort(() => Math.random() - 0.5);
-      
-      const correctMatching = matchItems.map((_, index) => {
-        const letter = String.fromCharCode(97 + index);
-        return `${letter}-${shuffledNumbers[index]}`;
-      }).join(", ");
-      
-      questions.push({
-        question: questionText,
-        options: matchItems,
-        correct_answer: correctMatching,
-        explanation: `This matching question tests your knowledge of terminology related to ${topic}.`,
-        question_type: "matching"
-      });
-    }
-  }
-  
-  // Randomize question order if mixed type was specified
-  if (type === "mixed") {
-    questions.sort(() => Math.random() - 0.5);
   }
   
   return questions;

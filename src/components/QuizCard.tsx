@@ -1,14 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Question, Answer, QuestionType } from '@/utils/quizUtils';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface QuizCardProps {
   question: Question;
@@ -33,13 +32,11 @@ const QuizCard: React.FC<QuizCardProps> = ({
 }) => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [textAnswer, setTextAnswer] = useState('');
-  const [matchSelections, setMatchSelections] = useState<Record<string, string>>({});
   const correctAnswer = question.answers.find(a => a.isCorrect);
   const isCorrect = userAnswer && correctAnswer?.id === userAnswer;
   
   useEffect(() => {
     setTextAnswer('');
-    setMatchSelections({});
     setShowExplanation(false);
   }, [question.id]);
   
@@ -57,27 +54,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
     }
   };
 
-  const handleMatchChange = (item: string, value: string) => {
-    const newSelections = { ...matchSelections, [item]: value };
-    setMatchSelections(newSelections);
-    
-    if (question.options && question.options.length > 0) {
-      const allMatchesMade = Object.keys(newSelections).length === question.options.length;
-      
-      if (allMatchesMade) {
-        const userMatching = question.options
-          .map((item, index) => {
-            const letter = String.fromCharCode(97 + index);
-            const match = newSelections[item] || '';
-            return `${letter}-${match}`;
-          })
-          .join(', ');
-        
-        onAnswerSelect(userMatching);
-      }
-    }
-  };
-
   const formatQuestionText = (text: string) => {
     if (question.type === 'fill-in-the-blank') {
       return text.replace(/___+/g, '_____');
@@ -85,57 +61,13 @@ const QuizCard: React.FC<QuizCardProps> = ({
     return text;
   };
 
-  const generateMatches = () => {
-    if (!question.options || question.options.length === 0) {
-      return { items: [], matches: [] };
-    }
-    
-    const items = question.options;
-    
-    // For matching questions, we create a set of numbered matches (1, 2, 3, 4, etc.)
-    const matches = Array.from({ length: items.length }, (_, i) => `${i + 1}`);
-    
-    return { items, matches };
-  };
-
-  // Determine the effective question type - convert any mixed type to a specific type
-  const determineEffectiveType = (questionObj: Question): QuestionType => {
-    if (questionObj.type !== 'mixed') {
-      return questionObj.type;
-    }
-    
-    // Determine which type a mixed question really is
-    if (questionObj.answers.length === 2 && 
-        questionObj.answers.some(a => a.text === 'True') && 
-        questionObj.answers.some(a => a.text === 'False')) {
-      return 'true-false';
-    } 
-    
-    if (questionObj.correctMatching) {
-      return 'matching';
-    }
-    
-    if (questionObj.text.includes('_____')) {
-      return 'fill-in-the-blank';
-    }
-    
-    if (questionObj.answers.length === 1) {
-      return 'short-answer';
-    }
-    
-    return 'multiple-choice';
-  };
-
   // This function renders different question types
-  const renderQuestionContent = (questionToRender: Question = question) => {
-    // Get the effective question type (resolving 'mixed' types)
-    const effectiveType = determineEffectiveType(questionToRender);
-    
-    switch (effectiveType) {
+  const renderQuestionContent = () => {
+    switch (question.type) {
       case 'multiple-choice':
         return (
           <div className="space-y-4">
-            {questionToRender.answers.map((answer) => (
+            {question.answers.map((answer) => (
               <motion.div
                 key={answer.id}
                 initial={{ opacity: 0.8, y: 5 }}
@@ -176,50 +108,58 @@ const QuizCard: React.FC<QuizCardProps> = ({
         );
       
       case 'true-false':
+        // Ensure we have both True and False options for true-false questions
+        const trueAnswer = question.answers.find(a => a.text === 'True');
+        const falseAnswer = question.answers.find(a => a.text === 'False');
+        
+        if (!trueAnswer || !falseAnswer) {
+          console.error("True/False question doesn't have proper options:", question);
+          return (
+            <div className="p-4 border rounded-lg">
+              <p className="text-red-500">This true/false question is incorrectly formatted.</p>
+            </div>
+          );
+        }
+        
         return (
           <div className="space-y-4">
-            {['True', 'False'].map((option) => {
-              const answer = questionToRender.answers.find(a => a.text === option);
-              if (!answer) return null;
-              
-              return (
-                <motion.div
-                  key={answer.id}
-                  initial={{ opacity: 0.8, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={cn(
-                    "relative p-4 border rounded-lg transition-all duration-200 cursor-pointer transform hover:translate-y-[-2px]",
-                    userAnswer === answer.id
-                      ? showResults
-                        ? answer.isCorrect
-                          ? "border-green-500 bg-green-50"
-                          : "border-red-500 bg-red-50"
-                        : "border-indigo-500 bg-indigo-50"
-                      : showResults && answer.isCorrect
-                      ? "border-green-500 bg-green-50"
-                      : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
-                  )}
-                  onClick={() => onAnswerSelect(answer.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-base font-medium">{option}</p>
-                    </div>
-
-                    {showResults && (
-                      <div className="ml-3 flex-shrink-0">
-                        {answer.isCorrect ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-500" />
-                        ) : userAnswer === answer.id ? (
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        ) : null}
-                      </div>
-                    )}
+            {[trueAnswer, falseAnswer].map((answer) => (
+              <motion.div
+                key={answer.id}
+                initial={{ opacity: 0.8, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className={cn(
+                  "relative p-4 border rounded-lg transition-all duration-200 cursor-pointer transform hover:translate-y-[-2px]",
+                  userAnswer === answer.id
+                    ? showResults
+                      ? answer.isCorrect
+                        ? "border-green-500 bg-green-50"
+                        : "border-red-500 bg-red-50"
+                      : "border-indigo-500 bg-indigo-50"
+                    : showResults && answer.isCorrect
+                    ? "border-green-500 bg-green-50"
+                    : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
+                )}
+                onClick={() => onAnswerSelect(answer.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-base font-medium">{answer.text}</p>
                   </div>
-                </motion.div>
-              );
-            })}
+
+                  {showResults && (
+                    <div className="ml-3 flex-shrink-0">
+                      {answer.isCorrect ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      ) : userAnswer === answer.id ? (
+                        <XCircle className="w-5 h-5 text-red-500" />
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
           </div>
         );
       
@@ -270,86 +210,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
           </div>
         );
       
-      case 'matching':
-        const { items, matches } = generateMatches();
-        return (
-          <div className="space-y-4">
-            <div className="p-4 border rounded-lg bg-gray-50">
-              <p className="text-sm mb-4 text-gray-600 italic">Match each item with its correct option by selecting a number from the dropdown:</p>
-              
-              {items.map((item, index) => (
-                <div key={index} className="mb-3 p-3 bg-white rounded border">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <span className="font-medium text-indigo-700">{String.fromCharCode(97 + index)}</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="mb-2">
-                        <span className="font-medium">{item}</span>
-                      </div>
-                      
-                      {!showResults ? (
-                        <Select
-                          onValueChange={(value) => handleMatchChange(item, value)}
-                          value={matchSelections[item] || ""}
-                          disabled={showResults}
-                        >
-                          <SelectTrigger className="w-full bg-white">
-                            <SelectValue placeholder="Select a match..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {matches.map((match, idx) => (
-                              <SelectItem key={idx} value={match}>
-                                {match}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                          <p className="text-sm text-green-700">
-                            <span className="font-medium">Correct match: </span>
-                            {questionToRender.correctMatching && 
-                             questionToRender.correctMatching.split(',').find(pair => pair.trim().startsWith(String.fromCharCode(97 + index)))
-                                ?.split('-')[1]?.trim() || '?'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {showResults && questionToRender.correctMatching && (
-                <div className="mt-4 p-3 bg-white rounded border">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Correct matching:</p>
-                  {questionToRender.correctMatching.split(',').map(pair => {
-                    const [letter, number] = pair.trim().split('-');
-                    const itemIndex = letter.charCodeAt(0) - 97;
-                    const item = items[itemIndex] || `Item ${letter}`;
-                    return (
-                      <div key={letter} className="my-1 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                          <span className="font-medium text-green-700">{letter}</span>
-                        </div>
-                        <span className="text-gray-700">{item}</span>
-                        <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />
-                        <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
-                          <span className="font-medium text-purple-700">{number}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      
       default:
         return (
           <div className="p-4 border rounded-lg">
-            <p className="text-gray-500">This question type ({questionToRender.type}) is not supported.</p>
+            <p className="text-gray-500">This question type ({question.type}) is not supported.</p>
           </div>
         );
     }
@@ -361,10 +225,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'true-false': return 'True/False';
       case 'fill-in-the-blank': return 'Fill in the Blank';
       case 'short-answer': return 'Short Answer';
-      case 'matching': return 'Matching';
-      case 'mixed': 
-        // For mixed type, show the effective type in display
-        return getQuestionTypeDisplay(determineEffectiveType(question));
       default: return type.charAt(0).toUpperCase() + type.slice(1).replace(/-/g, ' ');
     }
   };

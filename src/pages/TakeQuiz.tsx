@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,10 +35,6 @@ const TakeQuiz = () => {
       case 'short-answer':
       case 'short_answer':
         return 'short-answer';
-      case 'matching':
-        return 'matching';
-      case 'mixed':
-        return 'mixed';
       default:
         return 'multiple-choice'; // Default to multiple-choice if unknown
     }
@@ -51,19 +48,32 @@ const TakeQuiz = () => {
       const processedQuestions = receivedQuestions.map(question => {
         let questionType: QuestionType = mapToQuestionType(question.type || '');
         
-        if (question.answers && question.answers.length === 2 && 
-            question.answers.some(a => a.text === 'True') && 
-            question.answers.some(a => a.text === 'False')) {
+        // Special handling for true/false questions
+        if (question.options?.includes('True') && 
+            question.options?.includes('False') && 
+            question.options?.length === 2) {
           questionType = 'true-false';
+          
+          // Ensure we have both True and False answers
+          if (question.answers?.length !== 2) {
+            question.answers = [
+              {
+                id: `tf-true-${Math.random().toString(36).substring(2, 9)}`,
+                text: 'True',
+                isCorrect: question.correct_answer === 'True'
+              },
+              {
+                id: `tf-false-${Math.random().toString(36).substring(2, 9)}`,
+                text: 'False',
+                isCorrect: question.correct_answer === 'False'
+              }
+            ];
+          }
         }
         
-        if (question.correctMatching && 
-            /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(question.correctMatching)) {
-          questionType = 'matching';
-        }
-        
-        if (questionType === 'mixed') {
-          // Keep as mixed, we'll determine the effective type during rendering
+        // Ignore matching and mixed for now
+        if (questionType === 'matching' || questionType === 'mixed') {
+          questionType = 'multiple-choice';
         }
         
         const hasCorrectAnswer = question.answers?.some(answer => answer.isCorrect);
@@ -77,10 +87,15 @@ const TakeQuiz = () => {
         return { ...question, type: questionType };
       });
       
-      setQuestions(processedQuestions);
+      // Filter out any mixed or matching questions for now
+      const filteredQuestions = processedQuestions.filter(q => 
+        q.type !== 'matching' && q.type !== 'mixed'
+      );
+      
+      setQuestions(filteredQuestions);
       
       const initialAnswers: Record<string, string | null> = {};
-      processedQuestions.forEach(q => {
+      filteredQuestions.forEach(q => {
         initialAnswers[q.id] = null;
       });
       setUserAnswers(initialAnswers);
@@ -129,33 +144,10 @@ const TakeQuiz = () => {
           evaluatedAnswers[question.id] = isCorrect ? correctAnswer.id : 'incorrect';
         }
       }
-      
-      if (question.type === 'matching' && question.correctMatching && userAnswer !== 'incorrect') {
-        const isCorrect = compareMatchingAnswers(userAnswer, question.correctMatching);
-        
-        const correctAnswer = question.answers.find(a => a.isCorrect);
-        if (correctAnswer) {
-          evaluatedAnswers[question.id] = isCorrect ? correctAnswer.id : 'incorrect';
-        }
-      }
     });
     
     setUserAnswers(evaluatedAnswers);
     setIsEvaluating(false);
-  };
-
-  const compareMatchingAnswers = (userMatching: string, correctMatching: string): boolean => {
-    const normalizeMatching = (matchStr: string) => {
-      return matchStr.split(',')
-        .map(pair => pair.trim().toLowerCase())
-        .sort()
-        .join(',');
-    };
-    
-    const normalizedUser = normalizeMatching(userMatching);
-    const normalizedCorrect = normalizeMatching(correctMatching);
-    
-    return normalizedUser === normalizedCorrect;
   };
 
   const handlePrevious = () => {
