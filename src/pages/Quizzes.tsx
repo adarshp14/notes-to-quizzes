@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Clock, Calendar, Play, Trash2 } from 'lucide-react';
+import { Brain, Clock, Calendar, Play, Trash2, Eye } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -45,6 +45,11 @@ const Quizzes = () => {
   // Take a quiz
   const handleTakeQuiz = (quiz: Quiz) => {
     navigate('/take-quiz', { state: { questions: quiz.questions } });
+  };
+
+  // View quiz details
+  const handleViewQuiz = (quiz: Quiz) => {
+    navigate('/take-quiz', { state: { questions: quiz.questions, viewOnly: true } });
   };
 
   // Delete a quiz
@@ -154,6 +159,15 @@ const Quizzes = () => {
                         >
                           <Play className="w-4 h-4 mr-2" />
                           Take Quiz
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleViewQuiz(quiz)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View
                         </Button>
                         
                         <AlertDialog>

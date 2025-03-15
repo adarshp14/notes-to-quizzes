@@ -71,7 +71,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
                 : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
               showResults && "pointer-events-none"
             )}
-            onClick={() => !isAnswered && onAnswerSelect(answer.id)}
+            onClick={() => onAnswerSelect(answer.id)}
           >
             <div className="flex items-start">
               <div className="flex-1">

@@ -17,6 +17,7 @@ const TakeQuiz = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string | null>>({});
   const [showResults, setShowResults] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
 
   useEffect(() => {
     // Check if we have questions in the location state
@@ -30,6 +31,12 @@ const TakeQuiz = () => {
         initialAnswers[q.id] = null;
       });
       setUserAnswers(initialAnswers);
+      
+      // Check if this is view-only mode
+      if (location.state.viewOnly) {
+        setViewOnly(true);
+        setShowResults(true);
+      }
     } else {
       // Redirect to create quiz if no questions are available
       navigate('/create');
@@ -76,11 +83,17 @@ const TakeQuiz = () => {
     setCurrentQuestionIndex(0);
     setShowResults(false);
     setQuizCompleted(false);
+    setViewOnly(false);
   };
 
   // Return to create page
   const handleBackToCreate = () => {
     navigate('/create');
+  };
+
+  // Return to quizzes page
+  const handleBackToQuizzes = () => {
+    navigate('/quizzes');
   };
 
   if (questions.length === 0) {
@@ -111,23 +124,28 @@ const TakeQuiz = () => {
           <Button 
             variant="ghost" 
             className="mb-4" 
-            onClick={handleBackToCreate}
+            onClick={viewOnly ? handleBackToQuizzes : handleBackToCreate}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Create
+            {viewOnly ? 'Back to Quizzes' : 'Back to Create'}
           </Button>
           
-          <h1 className="text-3xl font-bold mb-2">Take Quiz</h1>
-          {!quizCompleted && (
+          <h1 className="text-3xl font-bold mb-2">{viewOnly ? 'View Quiz' : 'Take Quiz'}</h1>
+          {!quizCompleted && !viewOnly && (
             <p className="text-muted-foreground">
               Complete the quiz by answering all questions. You can review your answers at the end.
+            </p>
+          )}
+          {viewOnly && (
+            <p className="text-muted-foreground">
+              Browse through the quiz questions and see the correct answers.
             </p>
           )}
         </motion.div>
 
         <div className="max-w-2xl mx-auto">
           <AnimatePresence mode="wait">
-            {quizCompleted ? (
+            {quizCompleted && !viewOnly ? (
               <QuizResults 
                 key="results"
                 questions={questions} 
@@ -144,7 +162,7 @@ const TakeQuiz = () => {
                 onAnswerSelect={handleAnswerSelect}
                 onNext={handleNext}
                 onPrevious={handlePrevious}
-                showResults={showResults}
+                showResults={viewOnly}
               />
             )}
           </AnimatePresence>
