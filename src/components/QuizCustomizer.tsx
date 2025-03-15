@@ -28,7 +28,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
 
   return (
     <motion.div 
-      className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm"
+      className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -51,7 +51,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
           </div>
           <Slider
             id="question-count"
-            min={5}
+            min={0}
             max={30}
             step={1}
             value={[settings.questionCount]}
@@ -59,35 +59,37 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
             className="py-2"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>5</span>
+            <span>0</span>
             <span>30</span>
           </div>
         </div>
         
-        {/* Answer Options */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="answer-options" className="font-medium">
-              Answer Options Per Question
-            </Label>
-            <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-              {settings.answerOptions}
-            </span>
+        {/* Answer Options - Only show for multiple-choice */}
+        {settings.questionTypes === 'multiple-choice' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="answer-options" className="font-medium">
+                Answer Options Per Question
+              </Label>
+              <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
+                {settings.answerOptions}
+              </span>
+            </div>
+            <Slider
+              id="answer-options"
+              min={2}
+              max={5}
+              step={1}
+              value={[settings.answerOptions]}
+              onValueChange={(value) => updateSettings('answerOptions', value[0])}
+              className="py-2"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>2</span>
+              <span>5</span>
+            </div>
           </div>
-          <Slider
-            id="answer-options"
-            min={2}
-            max={5}
-            step={1}
-            value={[settings.answerOptions]}
-            onValueChange={(value) => updateSettings('answerOptions', value[0])}
-            className="py-2"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>2</span>
-            <span>5</span>
-          </div>
-        </div>
+        )}
         
         {/* Question Types */}
         <div className="space-y-3">
