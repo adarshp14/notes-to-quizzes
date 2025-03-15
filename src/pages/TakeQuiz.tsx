@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,11 +24,26 @@ const TakeQuiz = () => {
     if (location.state?.questions) {
       setIsLoading(true);
       const receivedQuestions = location.state.questions as Question[];
-      setQuestions(receivedQuestions);
+      
+      // Ensure all questions have a correct answer marked
+      const validatedQuestions = receivedQuestions.map(question => {
+        const hasCorrectAnswer = question.answers.some(answer => answer.isCorrect);
+        
+        // If no correct answer is marked, mark the first one as correct
+        if (!hasCorrectAnswer && question.answers.length > 0) {
+          const updatedAnswers = [...question.answers];
+          updatedAnswers[0] = { ...updatedAnswers[0], isCorrect: true };
+          return { ...question, answers: updatedAnswers };
+        }
+        
+        return question;
+      });
+      
+      setQuestions(validatedQuestions);
       
       // Initialize userAnswers with null values
       const initialAnswers: Record<string, string | null> = {};
-      receivedQuestions.forEach(q => {
+      validatedQuestions.forEach(q => {
         initialAnswers[q.id] = null;
       });
       setUserAnswers(initialAnswers);

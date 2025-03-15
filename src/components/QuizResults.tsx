@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, RefreshCw, Save, DownloadCloud, HelpCircle, Trophy, BookOpen, PieChart } from 'lucide-react';
@@ -175,9 +174,9 @@ const QuizResults: React.FC<QuizResultsProps> = ({ questions, userAnswers, onRes
                       <p className={`${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
                         Your answer: {userAnswerObj?.text || 'No answer selected'}
                       </p>
-                      {!isCorrect && (
+                      {!isCorrect && correctAnswer && (
                         <p className="text-green-700">
-                          Correct answer: {correctAnswer?.text}
+                          Correct answer: {correctAnswer.text}
                         </p>
                       )}
                       {question.explanation && (

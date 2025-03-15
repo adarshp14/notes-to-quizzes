@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,13 +35,11 @@ const Quizzes = () => {
   const [viewQuiz, setViewQuiz] = useState<Quiz | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Load saved quizzes on component mount
   useEffect(() => {
     const savedQuizzes = getSavedQuizzes();
     setQuizzes(savedQuizzes);
   }, []);
 
-  // Format date
   const formatDate = (date: Date): string => {
     if (!(date instanceof Date)) {
       date = new Date(date);
@@ -54,12 +51,10 @@ const Quizzes = () => {
     });
   };
 
-  // Take a quiz
   const handleTakeQuiz = (quiz: Quiz) => {
     navigate('/take-quiz', { state: { questions: quiz.questions } });
   };
 
-  // Delete a quiz
   const handleDeleteQuiz = (id: string) => {
     const updatedQuizzes = quizzes.filter(quiz => quiz.id !== id);
     localStorage.setItem('savedQuizzes', JSON.stringify(updatedQuizzes));
@@ -67,13 +62,11 @@ const Quizzes = () => {
     toast.success('Quiz deleted successfully');
   };
 
-  // View quiz questions
   const handleViewQuiz = (quiz: Quiz) => {
     setViewQuiz(quiz);
     setDialogOpen(true);
   };
 
-  // Navigate to create quiz page
   const handleCreateNew = () => {
     navigate('/create');
   };
@@ -95,7 +88,6 @@ const Quizzes = () => {
         </motion.div>
 
         <div className="space-y-6">
-          {/* Create new quiz button */}
           <div className="flex justify-end">
             <Button onClick={handleCreateNew} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
               <Brain className="w-4 h-4 mr-2" />
@@ -103,7 +95,6 @@ const Quizzes = () => {
             </Button>
           </div>
           
-          {/* Quiz list */}
           {quizzes.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -218,7 +209,6 @@ const Quizzes = () => {
           )}
         </div>
 
-        {/* View Quiz Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-auto">
             <DialogHeader>
@@ -258,7 +248,7 @@ const Quizzes = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="font-medium text-green-600">
-                              {correctAnswer?.text || 'N/A'}
+                              {correctAnswer ? correctAnswer.text : 'N/A'}
                             </TableCell>
                           </TableRow>
                         );
