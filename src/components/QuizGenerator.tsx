@@ -9,7 +9,8 @@ import {
   Question, 
   createQuiz, 
   saveQuiz, 
-  generatePDF
+  generatePDF,
+  QuestionType
 } from '@/utils/quizUtils';
 import { QuizSettings } from './QuizCustomizer';
 
@@ -41,12 +42,38 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
   const baseUrl = import.meta.env.VITE_API_URL;
 
+  // Map our question types to API question types
+  const mapQuestionTypeToApi = (type: QuestionType): string => {
+    switch(type) {
+      case 'multiple-choice': return 'multiple_choice';
+      case 'true-false': return 'true_false';
+      case 'fill-in-the-blank': return 'fill_in_the_blank';
+      case 'short-answer': return 'short_answer';
+      case 'matching': return 'matching';
+      case 'mixed': return 'mixed';
+      default: return 'multiple_choice';
+    }
+  };
+
+  // Map API question types back to our local types
+  const mapApiQuestionTypeToLocal = (type: string): QuestionType => {
+    switch(type) {
+      case 'multiple_choice': return 'multiple-choice';
+      case 'true_false': return 'true-false';
+      case 'fill_in_the_blank': return 'fill-in-the-blank';
+      case 'short_answer': return 'short-answer';
+      case 'matching': return 'matching';
+      case 'mixed': return 'mixed';
+      default: return 'multiple-choice';
+    }
+  };
+
   // Convert API response to local question shape
   const convertApiResponseToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
     return apiQuestions.map((q, index) => ({
       id: `${index + 1}`,
       text: q.question,
-      type: q.question_type === 'multiple_choice' ? 'multiple-choice' : 'true-false',
+      type: mapApiQuestionTypeToLocal(q.question_type),
       answers: q.options.map((option, optIndex) => ({
         id: `${index + 1}-${optIndex}`,
         text: option,
@@ -77,7 +104,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
           text: notes,
           num_questions: settings.questionCount,
           num_options: settings.answerOptions,
-          question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+          question_type: mapQuestionTypeToApi(settings.questionTypes),
           difficulty: settings.difficulty
         }),
       });
@@ -137,7 +164,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
             text: textContent,
             num_questions: settings.questionCount,
             num_options: settings.answerOptions,
-            question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+            question_type: mapQuestionTypeToApi(settings.questionTypes),
             difficulty: settings.difficulty
           }),
         });
@@ -161,8 +188,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         formData.append('file', file);
         formData.append('num_questions', settings.questionCount.toString());
         formData.append('num_options', settings.answerOptions.toString());
-        formData.append('question_type', 'multiple_choice'); // or derive from settings if you like
-        formData.append('difficulty', 'easy');              // or derive from settings if you like
+        formData.append('question_type', mapQuestionTypeToApi(settings.questionTypes));
+        formData.append('difficulty', settings.difficulty);
 
         const response = await fetch(`${baseUrl}/generate-file-quiz`, {
           method: 'POST',

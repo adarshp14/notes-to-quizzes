@@ -33,9 +33,6 @@ serve(async (req) => {
       hasFilename: Boolean(filename)
     });
     
-    // In a production environment, we would use different logic for text vs file
-    // For now, we'll just use the same generation function
-    
     // Generate questions based on provided text or file
     const questions = generateQuestions(
       text || filename, 
@@ -94,9 +91,24 @@ function generateQuestions(
     ? uniqueWords.slice(0, count * 2)
     : fallbackTopics;
   
+  // All supported question types
+  const questionTypes = [
+    "multiple_choice", 
+    "true_false", 
+    "fill_in_the_blank", 
+    "short_answer", 
+    "matching"
+  ];
+  
   for (let i = 0; i < count; i++) {
     const topicIndex = Math.floor(Math.random() * topics.length);
     const topic = topics[topicIndex] || fallbackTopics[i % fallbackTopics.length];
+    
+    // Determine question type - either use specified type or mix
+    let actualType = type;
+    if (type === "mixed") {
+      actualType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+    }
     
     // Generate question based on difficulty
     let questionText = `What is ${topic}?`;
@@ -106,7 +118,7 @@ function generateQuestions(
       questionText = `Analyze the implications of ${topic} in modern context.`;
     }
     
-    if (type === "multiple_choice") {
+    if (actualType === "multiple_choice") {
       const optionsArray = [];
       const correctIndex = Math.floor(Math.random() * options);
       
@@ -125,7 +137,8 @@ function generateQuestions(
         explanation: `This is an explanation about ${topic}.`,
         question_type: "multiple_choice"
       });
-    } else {
+    } 
+    else if (actualType === "true_false") {
       // True/False question
       const isTrue = Math.random() > 0.5;
       const statement = isTrue 
@@ -140,6 +153,55 @@ function generateQuestions(
         question_type: "true_false"
       });
     }
+    else if (actualType === "fill_in_the_blank") {
+      // Fill in the blank question
+      const blankQuestion = `${topic} is a key concept in this field. ${topic} can be defined as ___________.`;
+      
+      questions.push({
+        question: blankQuestion,
+        options: [`The correct definition of ${topic}`, `An incorrect definition of ${topic}`],
+        correct_answer: `The correct definition of ${topic}`,
+        explanation: `The blank should be filled with the definition of ${topic}.`,
+        question_type: "fill_in_the_blank"
+      });
+    }
+    else if (actualType === "short_answer") {
+      // Short answer question
+      const shortAnswerQuestion = `Briefly explain the concept of ${topic} in your own words.`;
+      
+      questions.push({
+        question: shortAnswerQuestion,
+        options: [`A proper explanation of ${topic} would include key points about its definition, purpose, and application.`],
+        correct_answer: `A proper explanation of ${topic} would include key points about its definition, purpose, and application.`,
+        explanation: `A good answer would discuss what ${topic} is and why it's important.`,
+        question_type: "short_answer"
+      });
+    }
+    else if (actualType === "matching") {
+      // Matching question
+      const matchingQuestion = `Match the following terms with their correct definitions:`;
+      
+      // For demonstration, we'll create a simple matching representation
+      const matchTerms = ['Term A', 'Term B', 'Term C', 'Term D'].slice(0, Math.min(4, options));
+      const correctMatching = `${matchTerms.join(', ')} matched with their correct definitions`;
+      
+      const incorrectOptions = Array(options - 1).fill(0).map((_, idx) => 
+        `Incorrect matching option ${idx + 1}`
+      );
+      
+      questions.push({
+        question: matchingQuestion,
+        options: [correctMatching, ...incorrectOptions],
+        correct_answer: correctMatching,
+        explanation: `This matching question tests your understanding of terminology related to ${topic}.`,
+        question_type: "matching"
+      });
+    }
+  }
+  
+  // Randomize question order if mixed type was specified
+  if (type === "mixed") {
+    questions.sort(() => Math.random() - 0.5);
   }
   
   return questions;

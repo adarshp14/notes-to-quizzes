@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
+import { QuestionType } from '@/utils/quizUtils';
 
 export interface QuizSettings {
   questionCount: number;
   answerOptions: number;
-  questionTypes: 'multiple-choice' | 'true-false' | 'mixed';
+  questionTypes: QuestionType;
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
@@ -108,20 +109,32 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
           
           <RadioGroup 
             value={settings.questionTypes} 
-            onValueChange={(value) => updateSettings('questionTypes', value)}
+            onValueChange={(value) => updateSettings('questionTypes', value as QuestionType)}
             className="flex flex-col space-y-2"
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="multiple-choice" id="multiple-choice" />
-              <Label htmlFor="multiple-choice" className="cursor-pointer">Multiple Choice Only</Label>
+              <Label htmlFor="multiple-choice" className="cursor-pointer">Multiple Choice</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="true-false" id="true-false" />
-              <Label htmlFor="true-false" className="cursor-pointer">True/False Only</Label>
+              <Label htmlFor="true-false" className="cursor-pointer">True/False</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="fill-in-the-blank" id="fill-in-the-blank" />
+              <Label htmlFor="fill-in-the-blank" className="cursor-pointer">Fill in the Blank</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="short-answer" id="short-answer" />
+              <Label htmlFor="short-answer" className="cursor-pointer">Short Answer</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="matching" id="matching" />
+              <Label htmlFor="matching" className="cursor-pointer">Matching</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="mixed" id="mixed" />
-              <Label htmlFor="mixed" className="cursor-pointer">Mixed Types</Label>
+              <Label htmlFor="mixed" className="cursor-pointer">Mixed (Random Types)</Label>
             </div>
           </RadioGroup>
         </div>
@@ -146,7 +159,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
           
           <RadioGroup 
             value={settings.difficulty} 
-            onValueChange={(value) => updateSettings('difficulty', value)}
+            onValueChange={(value) => updateSettings('difficulty', value as 'easy' | 'medium' | 'hard')}
             className="flex flex-col space-y-2"
           >
             <div className="flex items-center space-x-2">
