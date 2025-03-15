@@ -43,7 +43,10 @@ serve(async (req) => {
     );
     
     // Ensure each question has a valid options array and correct question type
-    questions.forEach(question => {
+    questions.forEach((question, index) => {
+      // Add question number starting from 1 instead of 0
+      question.questionNumber = index + 1;
+      
       // Fix true/false questions that might be incorrectly labeled
       if (question.question_type === "true_false" || 
           (question.correct_answer === "True" || question.correct_answer === "False")) {
@@ -174,7 +177,8 @@ function generateQuestions(
         options: optionsArray,
         correct_answer: optionsArray[correctIndex],
         explanation: `This is an explanation about ${topic}.`,
-        question_type: "multiple_choice"
+        question_type: "multiple_choice",
+        questionNumber: i + 1  // Add question number starting from 1
       });
     } 
     else if (actualType === "true_false") {
@@ -189,7 +193,8 @@ function generateQuestions(
         options: ["True", "False"],  // Always include both options
         correct_answer: isTrue ? "True" : "False",
         explanation: `This statement about ${topic} is ${isTrue ? "true" : "false"} because...`,
-        question_type: "true_false"
+        question_type: "true_false",
+        questionNumber: i + 1  // Add question number starting from 1
       });
     }
     else if (actualType === "fill_in_the_blank") {
@@ -201,7 +206,8 @@ function generateQuestions(
         options: [`The correct definition of ${topic}`, `An incorrect definition of ${topic}`],
         correct_answer: `The correct definition of ${topic}`,
         explanation: `The blank should be filled with the definition of ${topic}.`,
-        question_type: "fill_in_the_blank"
+        question_type: "fill_in_the_blank",
+        questionNumber: i + 1  // Add question number starting from 1
       });
     }
     else if (actualType === "short_answer") {
@@ -214,7 +220,8 @@ function generateQuestions(
         options: [correctAnswer], // Ensure options is an array, not null
         correct_answer: correctAnswer,
         explanation: `A good answer would discuss what ${topic} is and why it's important.`,
-        question_type: "short_answer"
+        question_type: "short_answer",
+        questionNumber: i + 1  // Add question number starting from 1
       });
     }
   }

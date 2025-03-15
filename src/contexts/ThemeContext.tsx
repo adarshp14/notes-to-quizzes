@@ -11,14 +11,14 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Initialize theme from localStorage or system preference
+  // Initialize theme from localStorage or default to light
   const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || savedTheme === 'light') {
       return savedTheme;
     }
-    // Check system preference
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    // Default to light mode instead of checking system preference
+    return 'light';
   });
 
   // Apply theme class to document

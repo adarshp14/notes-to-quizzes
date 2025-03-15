@@ -51,7 +51,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
           </div>
           <Slider
             id="question-count"
-            min={0}
+            min={1}
             max={30}
             step={1}
             value={[settings.questionCount]}
@@ -59,7 +59,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
             className="py-2"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>0</span>
+            <span>1</span>
             <span>30</span>
           </div>
         </div>
