@@ -116,7 +116,7 @@ const Index = () => {
               </Link>
               <Link 
                 to="/quizzes" 
-                className="bg-white hover:bg-gray-50 text-gray-800 px-8 py-3 rounded-lg font-medium border border-gray-200 transition-all duration-300 shadow-sm flex items-center justify-center"
+                className="bg-white hover:bg-gray-50 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white px-8 py-3 rounded-lg font-medium border border-gray-200 dark:border-gray-700 transition-all duration-300 shadow-sm flex items-center justify-center"
               >
                 <Play className="w-5 h-5 mr-2" />
                 Take Quiz
@@ -126,10 +126,10 @@ const Index = () => {
         </section>
 
         {/* Features Section */}
-        <section className="py-20 bg-white">
+        <section className="py-20 bg-white dark:bg-gray-900">
           <div className="section-container">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+              <h2 className="text-3xl font-bold mb-4 dark:text-white">How It Works</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 A simple process designed to help you learn more effectively
               </p>
@@ -146,12 +146,12 @@ const Index = () => {
                 <motion.div 
                   key={index}
                   variants={itemVariants}
-                  className="p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 bg-white"
+                  className="p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-700 dark:hover:shadow-gray-800/50"
                 >
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     {feature.icon}
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                  <h3 className="text-xl font-semibold mb-2 dark:text-white">{feature.title}</h3>
                   <p className="text-muted-foreground">{feature.description}</p>
                 </motion.div>
               ))}
@@ -160,7 +160,7 @@ const Index = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-b from-white to-gray-50">
+        <section className="py-20 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
           <div className="section-container text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -168,7 +168,7 @@ const Index = () => {
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               viewport={{ once: true, margin: "-100px" }}
             >
-              <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Learning?</h2>
+              <h2 className="text-3xl font-bold mb-4 dark:text-white">Ready to Transform Your Learning?</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
                 Start creating custom quizzes from your study materials today and boost your retention.
               </p>
@@ -184,14 +184,14 @@ const Index = () => {
         </section>
 
         {/* Footer */}
-        <footer className="py-10 border-t border-gray-200">
+        <footer className="py-10 border-t border-gray-200 dark:border-gray-800">
           <div className="section-container">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center space-x-2 mb-4 md:mb-0">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                   <Brain className="w-4 h-4" />
                 </div>
-                <span className="font-semibold text-lg">QuizCraft</span>
+                <span className="font-semibold text-lg dark:text-white">QuizCraft</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} QuizCraft. All rights reserved.
