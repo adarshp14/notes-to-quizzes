@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Brain, Loader2, DownloadCloud, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,17 +44,39 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
   // Convert API response to local question shape
   const convertApiResponseToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
-    return apiQuestions.map((q, index) => ({
-      id: `${index + 1}`,
-      text: q.question,
-      type: q.question_type === 'multiple_choice' ? 'multiple-choice' : 'true-false',
-      answers: q.options.map((option, optIndex) => ({
-        id: `${index + 1}-${optIndex}`,
-        text: option,
-        isCorrect: option === q.correct_answer
-      })),
-      explanation: q.explanation
-    }));
+    return apiQuestions.map((q, index) => {
+      // Map the API question type to our application's question type
+      let questionType: 'multiple-choice' | 'true-false' | 'fill-in-the-blank' | 'short-answer' | 'matching';
+      
+      switch (q.question_type) {
+        case 'true_false':
+          questionType = 'true-false';
+          break;
+        case 'fill_in_the_blank':
+          questionType = 'fill-in-the-blank';
+          break;
+        case 'short_answer':
+          questionType = 'short-answer';
+          break;
+        case 'matching':
+          questionType = 'matching';
+          break;
+        default:
+          questionType = 'multiple-choice';
+      }
+      
+      return {
+        id: `${index + 1}`,
+        text: q.question,
+        type: questionType,
+        answers: q.options.map((option, optIndex) => ({
+          id: `${index + 1}-${optIndex}`,
+          text: option,
+          isCorrect: option === q.correct_answer
+        })),
+        explanation: q.explanation
+      }
+    });
   };
 
   // -----------------------------
@@ -68,6 +91,22 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
+      // Map the application's question type to the API's question type format
+      let apiQuestionType;
+      if (settings.questionTypes === 'multiple-choice') {
+        apiQuestionType = 'multiple_choice';
+      } else if (settings.questionTypes === 'true-false') {
+        apiQuestionType = 'true_false';
+      } else if (settings.questionTypes === 'fill-in-the-blank') {
+        apiQuestionType = 'fill_in_the_blank';
+      } else if (settings.questionTypes === 'short-answer') {
+        apiQuestionType = 'short_answer';
+      } else if (settings.questionTypes === 'matching') {
+        apiQuestionType = 'matching';
+      } else {
+        apiQuestionType = 'mixed';
+      }
+
       const response = await fetch(`${baseUrl}/generate-text-quiz`, {
         method: 'POST',
         headers: {
@@ -77,7 +116,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
           text: notes,
           num_questions: settings.questionCount,
           num_options: settings.answerOptions,
-          question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+          question_type: apiQuestionType,
           difficulty: settings.difficulty
         }),
       });
@@ -127,6 +166,22 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
+      // Map the application's question type to the API's question type format
+      let apiQuestionType;
+      if (settings.questionTypes === 'multiple-choice') {
+        apiQuestionType = 'multiple_choice';
+      } else if (settings.questionTypes === 'true-false') {
+        apiQuestionType = 'true_false';
+      } else if (settings.questionTypes === 'fill-in-the-blank') {
+        apiQuestionType = 'fill_in_the_blank';
+      } else if (settings.questionTypes === 'short-answer') {
+        apiQuestionType = 'short_answer';
+      } else if (settings.questionTypes === 'matching') {
+        apiQuestionType = 'matching';
+      } else {
+        apiQuestionType = 'mixed';
+      }
+
       if (file.type === 'text/plain') {
         // If it's plain text, read its contents & call /generate-text-quiz
         const textContent = await file.text();
@@ -137,7 +192,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
             text: textContent,
             num_questions: settings.questionCount,
             num_options: settings.answerOptions,
-            question_type: settings.questionTypes === 'multiple-choice' ? 'multiple_choice' : 'true_false',
+            question_type: apiQuestionType,
             difficulty: settings.difficulty
           }),
         });
@@ -161,8 +216,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         formData.append('file', file);
         formData.append('num_questions', settings.questionCount.toString());
         formData.append('num_options', settings.answerOptions.toString());
-        formData.append('question_type', 'multiple_choice'); // or derive from settings if you like
-        formData.append('difficulty', 'easy');              // or derive from settings if you like
+        formData.append('question_type', apiQuestionType);
+        formData.append('difficulty', settings.difficulty);
 
         const response = await fetch(`${baseUrl}/generate-file-quiz`, {
           method: 'POST',

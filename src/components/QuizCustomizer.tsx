@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Settings, HelpCircle } from 'lucide-react';
+import { Settings, HelpCircle, List, FileText, MessageSquareText, Shuffle } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 export interface QuizSettings {
   questionCount: number;
   answerOptions: number;
-  questionTypes: 'multiple-choice' | 'true-false' | 'mixed';
+  questionTypes: 'multiple-choice' | 'true-false' | 'fill-in-the-blank' | 'short-answer' | 'matching' | 'mixed';
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
@@ -50,7 +50,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
           </div>
           <Slider
             id="question-count"
-            min={5}
+            min={1}
             max={30}
             step={1}
             value={[settings.questionCount]}
@@ -58,7 +58,7 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
             className="py-2"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>5</span>
+            <span>1</span>
             <span>30</span>
           </div>
         </div>
@@ -113,15 +113,45 @@ const QuizCustomizer: React.FC<QuizCustomizerProps> = ({ settings, onSettingsCha
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="multiple-choice" id="multiple-choice" />
-              <Label htmlFor="multiple-choice" className="cursor-pointer">Multiple Choice Only</Label>
+              <Label htmlFor="multiple-choice" className="cursor-pointer flex items-center">
+                <List className="w-4 h-4 mr-2 text-primary" />
+                Multiple Choice Only
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="true-false" id="true-false" />
-              <Label htmlFor="true-false" className="cursor-pointer">True/False Only</Label>
+              <Label htmlFor="true-false" className="cursor-pointer flex items-center">
+                <FileText className="w-4 h-4 mr-2 text-primary" />
+                True/False Only
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="fill-in-the-blank" id="fill-in-the-blank" />
+              <Label htmlFor="fill-in-the-blank" className="cursor-pointer flex items-center">
+                <MessageSquareText className="w-4 h-4 mr-2 text-primary" />
+                Fill in the Blank
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="short-answer" id="short-answer" />
+              <Label htmlFor="short-answer" className="cursor-pointer flex items-center">
+                <MessageSquareText className="w-4 h-4 mr-2 text-primary" />
+                Short Answer
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="matching" id="matching" />
+              <Label htmlFor="matching" className="cursor-pointer flex items-center">
+                <List className="w-4 h-4 mr-2 text-primary" />
+                Matching
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="mixed" id="mixed" />
-              <Label htmlFor="mixed" className="cursor-pointer">Mixed Types</Label>
+              <Label htmlFor="mixed" className="cursor-pointer flex items-center">
+                <Shuffle className="w-4 h-4 mr-2 text-primary" />
+                Mixed Types (Random)
+              </Label>
             </div>
           </RadioGroup>
         </div>

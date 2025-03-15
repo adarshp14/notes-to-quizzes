@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,7 +18,7 @@ const CreateQuiz = () => {
   const [file, setFile] = useState<File | null>(null);
 
   const [settings, setSettings] = useState<QuizSettings>({
-    questionCount: 5,
+    questionCount: 1, // Changed from 5 to 1
     answerOptions: 4,
     questionTypes: 'multiple-choice',
     difficulty: 'medium'

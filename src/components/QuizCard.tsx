@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Question, Answer } from '@/utils/quizUtils';
 
@@ -28,9 +29,19 @@ const QuizCard: React.FC<QuizCardProps> = ({
   showResults,
 }) => {
   const [showExplanation, setShowExplanation] = useState(false);
+  const [textInput, setTextInput] = useState('');
   const isAnswered = userAnswer !== null;
   const correctAnswer = question.answers.find(a => a.isCorrect);
   const isCorrect = userAnswer && correctAnswer?.id === userAnswer;
+
+  // Handle text input for fill-in-the-blank and short answer questions
+  const handleTextSubmit = () => {
+    if (textInput.trim()) {
+      // Generate a temporary ID for the text answer
+      const answerId = `text-${Date.now()}`;
+      onAnswerSelect(answerId);
+    }
+  };
 
   return (
     <motion.div
@@ -47,7 +58,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
             Question {questionNumber} of {totalQuestions}
           </span>
           <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/10 text-primary">
-            {question.type === 'multiple-choice' ? 'Multiple Choice' : 'True/False'}
+            {question.type === 'multiple-choice' ? 'Multiple Choice' : 
+             question.type === 'true-false' ? 'True/False' :
+             question.type === 'fill-in-the-blank' ? 'Fill in the Blank' : 
+             question.type === 'short-answer' ? 'Short Answer' : 'Matching'}
           </span>
         </div>
         <h3 className="text-lg font-medium">{question.text}</h3>
@@ -55,41 +69,70 @@ const QuizCard: React.FC<QuizCardProps> = ({
 
       {/* Answer options */}
       <div className="p-6 space-y-3">
-        {question.answers.map((answer) => (
-          <div
-            key={answer.id}
-            className={cn(
-              "relative p-4 border rounded-lg transition-all duration-200 cursor-pointer",
-              userAnswer === answer.id
-                ? showResults
-                  ? isCorrect
-                    ? "border-green-500 bg-green-50"
-                    : "border-red-500 bg-red-50"
-                  : "border-primary bg-primary/5"
-                : showResults && answer.isCorrect
-                ? "border-green-500 bg-green-50"
-                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
-              showResults && "pointer-events-none"
-            )}
-            onClick={() => onAnswerSelect(answer.id)}
-          >
-            <div className="flex items-start">
-              <div className="flex-1">
-                <p className="text-base">{answer.text}</p>
-              </div>
-
-              {showResults && (
-                <div className="ml-3 flex-shrink-0">
-                  {answer.isCorrect ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  ) : userAnswer === answer.id ? (
-                    <XCircle className="w-5 h-5 text-red-500" />
-                  ) : null}
-                </div>
+        {question.type === 'fill-in-the-blank' || question.type === 'short-answer' ? (
+          /* Text Input for fill-in-the-blank and short-answer */
+          <div className="space-y-4">
+            <div className="flex space-x-2">
+              <Input
+                type="text"
+                placeholder={question.type === 'fill-in-the-blank' ? "Fill in the blank..." : "Type your answer..."}
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                disabled={isAnswered || showResults}
+                className="flex-1"
+              />
+              {!isAnswered && !showResults && (
+                <Button onClick={handleTextSubmit} disabled={!textInput.trim()}>
+                  Submit
+                </Button>
               )}
             </div>
+            
+            {showResults && correctAnswer && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm font-medium text-green-800">Correct Answer:</p>
+                <p className="text-base">{correctAnswer.text}</p>
+              </div>
+            )}
           </div>
-        ))}
+        ) : (
+          /* Multiple choice, true/false and matching options */
+          question.answers.map((answer) => (
+            <div
+              key={answer.id}
+              className={cn(
+                "relative p-4 border rounded-lg transition-all duration-200 cursor-pointer",
+                userAnswer === answer.id
+                  ? showResults
+                    ? isCorrect
+                      ? "border-green-500 bg-green-50"
+                      : "border-red-500 bg-red-50"
+                    : "border-primary bg-primary/5"
+                  : showResults && answer.isCorrect
+                  ? "border-green-500 bg-green-50"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
+                showResults && "pointer-events-none"
+              )}
+              onClick={() => onAnswerSelect(answer.id)}
+            >
+              <div className="flex items-start">
+                <div className="flex-1">
+                  <p className="text-base">{answer.text}</p>
+                </div>
+
+                {showResults && (
+                  <div className="ml-3 flex-shrink-0">
+                    {answer.isCorrect ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : userAnswer === answer.id ? (
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
 
         {/* Explanation toggle */}
         {showResults && (

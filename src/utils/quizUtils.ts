@@ -1,8 +1,9 @@
+
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export type QuestionType = 'multiple-choice' | 'true-false';
+export type QuestionType = 'multiple-choice' | 'true-false' | 'fill-in-the-blank' | 'short-answer' | 'matching';
 
 export interface Answer {
   id: string;
@@ -41,8 +42,24 @@ export const generateId = () => {
 // Convert API response format to our application's Question format
 export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
   return apiQuestions.map(apiQ => {
-    const questionType: QuestionType =
-      apiQ.question_type === 'true_false' ? 'true-false' : 'multiple-choice';
+    // Map API question type to application QuestionType
+    let questionType: QuestionType;
+    switch (apiQ.question_type) {
+      case 'true_false':
+        questionType = 'true-false';
+        break;
+      case 'fill_in_the_blank':
+        questionType = 'fill-in-the-blank';
+        break;
+      case 'short_answer':
+        questionType = 'short-answer';
+        break;
+      case 'matching':
+        questionType = 'matching';
+        break;
+      default:
+        questionType = 'multiple-choice';
+    }
 
     // Create answers array from options
     const answers: Answer[] = apiQ.options.map(option => ({
@@ -66,7 +83,7 @@ export const generateDemoQuestions = (
   notes: string,
   count: number,
   answerOptions: number,
-  questionTypes: 'multiple-choice' | 'true-false' | 'mixed',
+  questionTypes: 'multiple-choice' | 'true-false' | 'fill-in-the-blank' | 'short-answer' | 'matching' | 'mixed',
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question[]> => {
   return new Promise(resolve => {
@@ -89,13 +106,15 @@ export const generateDemoQuestions = (
         .filter(word => word.length > 3); // Only keep substantial words
 
       for (let i = 0; i < count; i++) {
-        // Determine if this question should be multiple choice or true/false
-        let type: QuestionType = 'multiple-choice';
-
-        if (questionTypes === 'true-false') {
-          type = 'true-false';
-        } else if (questionTypes === 'mixed') {
-          type = Math.random() > 0.5 ? 'multiple-choice' : 'true-false';
+        // Determine question type based on selection
+        let type: QuestionType;
+        
+        if (questionTypes === 'mixed') {
+          // If mixed, randomly choose one of the question types
+          const types: QuestionType[] = ['multiple-choice', 'true-false', 'fill-in-the-blank', 'short-answer', 'matching'];
+          type = types[Math.floor(Math.random() * types.length)];
+        } else {
+          type = questionTypes as QuestionType;
         }
 
         // Generate question
@@ -109,6 +128,13 @@ export const generateDemoQuestions = (
           questionText = `How does ${topic} relate to the key concepts in these notes?`;
         } else {
           questionText = `Analyze the significance of ${topic} in the context of the broader subject matter.`;
+        }
+
+        // Adjust question text based on type
+        if (type === 'fill-in-the-blank') {
+          questionText = `Complete this statement: ${topic} is defined as __________.`;
+        } else if (type === 'matching') {
+          questionText = `Match ${topic} with its correct definition.`;
         }
 
         // Create answers
@@ -136,7 +162,7 @@ export const generateDemoQuestions = (
 
           // Shuffle answers
           answers.sort(() => Math.random() - 0.5);
-        } else {
+        } else if (type === 'true-false') {
           // True/False question
           const correctAnswer = Math.random() > 0.5;
 
@@ -151,6 +177,23 @@ export const generateDemoQuestions = (
             text: 'False',
             isCorrect: !correctAnswer
           });
+        } else if (type === 'fill-in-the-blank' || type === 'short-answer') {
+          // For fill in the blank, we just have one correct answer
+          answers.push({
+            id: generateId(),
+            text: `The definition of ${topic}`,
+            isCorrect: true
+          });
+        } else if (type === 'matching') {
+          // For matching, create pairs
+          for (let j = 0; j < Math.min(4, answerOptions); j++) {
+            const isCorrect = j === 0;
+            answers.push({
+              id: generateId(),
+              text: isCorrect ? `Definition of ${topic}` : `Incorrect definition ${j} of ${topic}`,
+              isCorrect
+            });
+          }
         }
 
         questions.push({
@@ -160,6 +203,11 @@ export const generateDemoQuestions = (
           answers,
           explanation: `This explanation provides context about ${topic} and why the correct answer is correct.`
         });
+      }
+
+      // If mixed type was selected, randomize the order of questions
+      if (questionTypes === 'mixed') {
+        questions.sort(() => Math.random() - 0.5);
       }
 
       resolve(questions);

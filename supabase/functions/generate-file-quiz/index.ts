@@ -17,7 +17,7 @@ serve(async (req) => {
     const body = await req.json();
     
     // Parse input parameters with defaults
-    const questionCount = body.num_questions || 5;
+    const questionCount = body.num_questions || 1; // Set minimum to 1
     const answerOptions = body.num_options || 4;
     const questionType = body.question_type || "multiple_choice";
     const difficulty = body.difficulty || "medium";
@@ -32,9 +32,6 @@ serve(async (req) => {
       hasText: Boolean(text),
       hasFilename: Boolean(filename)
     });
-    
-    // In a production environment, we would use different logic for text vs file
-    // For now, we'll just use the same generation function
     
     // Generate questions based on provided text or file
     const questions = generateQuestions(
@@ -66,7 +63,7 @@ serve(async (req) => {
 // Function to generate quiz questions
 function generateQuestions(
   source: string,
-  count = 5, 
+  count = 1, // Set minimum to 1
   options = 4, 
   type = "multiple_choice", 
   difficulty = "medium"
@@ -94,9 +91,19 @@ function generateQuestions(
     ? uniqueWords.slice(0, count * 2)
     : fallbackTopics;
   
+  // If mixed type is requested, we'll generate a variety of question types
+  const questionTypes = type === "mixed" 
+    ? ["multiple_choice", "true_false", "fill_in_the_blank", "short_answer", "matching"]
+    : [type];
+  
   for (let i = 0; i < count; i++) {
     const topicIndex = Math.floor(Math.random() * topics.length);
     const topic = topics[topicIndex] || fallbackTopics[i % fallbackTopics.length];
+    
+    // For mixed type, cycle through question types
+    const currentType = type === "mixed"
+      ? questionTypes[i % questionTypes.length]
+      : type;
     
     // Generate question based on difficulty
     let questionText = `What is ${topic}?`;
@@ -106,7 +113,14 @@ function generateQuestions(
       questionText = `Analyze the implications of ${topic} in modern context.`;
     }
     
-    if (type === "multiple_choice") {
+    // Adjust question for specific question types
+    if (currentType === "fill_in_the_blank") {
+      questionText = `Complete this statement: ${topic} is a __________ that impacts modern technology.`;
+    } else if (currentType === "matching") {
+      questionText = `Match ${topic} with its correct definition or application.`;
+    }
+    
+    if (currentType === "multiple_choice") {
       const optionsArray = [];
       const correctIndex = Math.floor(Math.random() * options);
       
@@ -125,7 +139,7 @@ function generateQuestions(
         explanation: `This is an explanation about ${topic}.`,
         question_type: "multiple_choice"
       });
-    } else {
+    } else if (currentType === "true_false") {
       // True/False question
       const isTrue = Math.random() > 0.5;
       const statement = isTrue 
@@ -139,7 +153,58 @@ function generateQuestions(
         explanation: `This statement about ${topic} is ${isTrue ? "true" : "false"} because...`,
         question_type: "true_false"
       });
+    } else if (currentType === "fill_in_the_blank") {
+      // Fill in the blank question
+      const answer = `technological innovation`;
+      
+      questions.push({
+        question: questionText,
+        options: [answer],
+        correct_answer: answer,
+        explanation: `${topic} is indeed a ${answer} because...`,
+        question_type: "fill_in_the_blank"
+      });
+    } else if (currentType === "short_answer") {
+      // Short answer question
+      const answer = `${topic} is a concept that refers to advanced technology`;
+      
+      questions.push({
+        question: `In 1-2 sentences, describe what ${topic} is.`,
+        options: [answer],
+        correct_answer: answer,
+        explanation: `A good answer would include key aspects of ${topic} such as...`,
+        question_type: "short_answer"
+      });
+    } else if (currentType === "matching") {
+      // Matching question - for API we'll represent this as multiple choice
+      const matchItems = [
+        `${topic}`,
+        `Application of ${topic}`,
+        `History of ${topic}`,
+        `Future of ${topic}`
+      ];
+      
+      const matchAnswers = [
+        `Definition of ${topic}`,
+        `How ${topic} is used today`,
+        `Evolution of ${topic} over time`,
+        `Potential developments in ${topic}`
+      ];
+      
+      // For API format compatibility, we'll just use the first pair
+      questions.push({
+        question: `Match ${topic} with its correct definition`,
+        options: matchAnswers,
+        correct_answer: matchAnswers[0],
+        explanation: `${matchItems[0]} is correctly matched with ${matchAnswers[0]} because...`,
+        question_type: "matching"
+      });
     }
+  }
+  
+  // If mixed type was requested, shuffle the questions
+  if (type === "mixed") {
+    questions.sort(() => Math.random() - 0.5);
   }
   
   return questions;
