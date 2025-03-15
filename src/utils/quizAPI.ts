@@ -21,14 +21,12 @@ export const generateQuizFromNotes = async (
   settings: QuizSettings
 ): Promise<Question[]> => {
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
-    console.log("DEBUG - API URL being used for notes:", baseUrl);
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    const endpoint = `${baseUrl}/generate-text-quiz`;
+    const endpoint = `/api/generate-text-quiz`;
     
-    console.log("DEBUG - Calling API endpoint:", endpoint);
+    console.log("DEBUG - Calling API endpoint via proxy:", endpoint);
     console.log("DEBUG - with settings:", {
       notes: notes.substring(0, 50) + "...",
       questionCount: settings.questionCount,
@@ -87,14 +85,12 @@ export const generateQuizFromFile = async (
   settings: QuizSettings
 ): Promise<Question[]> => {
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
-    console.log("DEBUG - API URL being used for file:", baseUrl);
     console.log("DEBUG - Environment variables:", import.meta.env);
     
     const apiQuestionType = getApiQuestionType(settings.questionTypes);
-    const endpoint = `${baseUrl}/generate-file-quiz`;
+    const endpoint = `/api/generate-file-quiz`;
     
-    console.log("DEBUG - Calling API endpoint:", endpoint);
+    console.log("DEBUG - Calling API endpoint via proxy:", endpoint);
     console.log("DEBUG - with file:", file.name, file.type, file.size);
 
     if (file.type === 'text/plain') {
