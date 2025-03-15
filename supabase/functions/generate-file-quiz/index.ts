@@ -159,7 +159,7 @@ function generateQuestions(
       
       questions.push({
         question: questionText,
-        options: [answer],
+        options: null,  // No options for fill in the blank
         correct_answer: answer,
         explanation: `${topic} is indeed a ${answer} because...`,
         question_type: "fill_in_the_blank"
@@ -170,13 +170,13 @@ function generateQuestions(
       
       questions.push({
         question: `In 1-2 sentences, describe what ${topic} is.`,
-        options: [answer],
+        options: null,  // No options for short answer
         correct_answer: answer,
         explanation: `A good answer would include key aspects of ${topic} such as...`,
         question_type: "short_answer"
       });
     } else if (currentType === "matching") {
-      // Matching question - for API we'll represent this as multiple choice
+      // Matching question
       const matchItems = [
         `${topic}`,
         `Application of ${topic}`,
@@ -191,12 +191,19 @@ function generateQuestions(
         `Potential developments in ${topic}`
       ];
       
-      // For API format compatibility, we'll just use the first pair
+      // Add the matching pattern as an option
+      const optionsArray = [
+        `a) ${matchItems[0]} - 1) ${matchAnswers[0]}`,
+        `b) ${matchItems[1]} - 2) ${matchAnswers[1]}`,
+        `c) ${matchItems[2]} - 3) ${matchAnswers[2]}`,
+        `d) ${matchItems[3]} - 4) ${matchAnswers[3]}`
+      ];
+      
       questions.push({
-        question: `Match ${topic} with its correct definition`,
-        options: matchAnswers,
-        correct_answer: matchAnswers[0],
-        explanation: `${matchItems[0]} is correctly matched with ${matchAnswers[0]} because...`,
+        question: `Match the following terms related to ${topic}:`,
+        options: optionsArray,
+        correct_answer: `a) 1, b) 2, c) 3, d) 4`,
+        explanation: `These are the correct matches for terms related to ${topic}.`,
         question_type: "matching"
       });
     }

@@ -18,7 +18,7 @@ const CreateQuiz = () => {
   const [file, setFile] = useState<File | null>(null);
 
   const [settings, setSettings] = useState<QuizSettings>({
-    questionCount: 1, // Changed from 5 to 1
+    questionCount: 1, // Starting with 1 question
     answerOptions: 4,
     questionTypes: 'multiple-choice',
     difficulty: 'medium'

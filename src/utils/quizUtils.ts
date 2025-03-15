@@ -28,7 +28,7 @@ export interface Quiz {
 
 interface ApiQuestion {
   question: string;
-  options: string[];
+  options: string[] | null;
   correct_answer: string;
   explanation: string;
   question_type: string;
@@ -61,12 +61,54 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         questionType = 'multiple-choice';
     }
 
-    // Create answers array from options
-    const answers: Answer[] = apiQ.options.map(option => ({
-      id: generateId(),
-      text: option,
-      isCorrect: option === apiQ.correct_answer
-    }));
+    // Create answers array based on question type
+    let answers: Answer[] = [];
+    
+    if (questionType === 'true-false') {
+      // For true/false questions, create True and False options
+      answers = [
+        { id: generateId(), text: 'True', isCorrect: apiQ.correct_answer === 'True' },
+        { id: generateId(), text: 'False', isCorrect: apiQ.correct_answer === 'False' }
+      ];
+    } else if (questionType === 'fill-in-the-blank' || questionType === 'short-answer') {
+      // For fill-in-the-blank and short-answer, just one correct answer
+      answers = [
+        { id: generateId(), text: apiQ.correct_answer, isCorrect: true }
+      ];
+    } else if (questionType === 'multiple-choice') {
+      // For multiple choice, use provided options if available
+      if (apiQ.options && Array.isArray(apiQ.options)) {
+        answers = apiQ.options.map(option => ({
+          id: generateId(),
+          text: option,
+          isCorrect: option === apiQ.correct_answer
+        }));
+      } else {
+        // Fallback if options are missing
+        answers = [
+          { id: generateId(), text: apiQ.correct_answer, isCorrect: true },
+          { id: generateId(), text: 'Alternative option 1', isCorrect: false },
+          { id: generateId(), text: 'Alternative option 2', isCorrect: false },
+          { id: generateId(), text: 'Alternative option 3', isCorrect: false }
+        ];
+      }
+    } else if (questionType === 'matching') {
+      // For matching questions, try to parse the correct_answer which might be in format "a) 3, b) 1, c) 2, d) 4"
+      // or use options if available
+      if (apiQ.options && Array.isArray(apiQ.options)) {
+        // Use provided options
+        answers = apiQ.options.map(option => ({
+          id: generateId(),
+          text: option,
+          isCorrect: option === apiQ.correct_answer
+        }));
+      } else {
+        // Create a fallback single answer
+        answers = [
+          { id: generateId(), text: apiQ.correct_answer, isCorrect: true }
+        ];
+      }
+    }
 
     return {
       id: generateId(),
