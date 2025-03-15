@@ -19,6 +19,7 @@ const TakeQuiz = () => {
   const [showResults, setShowResults] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   useEffect(() => {
     // Check if we have questions in the location state
@@ -56,24 +57,17 @@ const TakeQuiz = () => {
     }
   }, [location.state, navigate]);
 
-  // Handle selecting an answer
+  // Handle selecting an answer - now just stores the selection without evaluation
   const handleAnswerSelect = (answerId: string) => {
     if (questions.length === 0 || showResults) return;
     
     const currentQuestion = questions[currentQuestionIndex];
     
-    // Allow changing answer before moving to next question
+    // Store user's answer without immediate evaluation
     setUserAnswers(prev => ({
       ...prev,
       [currentQuestion.id]: answerId
     }));
-    
-    // For text-based questions (short answer, fill-in-blank), provide feedback
-    if ((currentQuestion.type === 'short-answer' || currentQuestion.type === 'fill-in-the-blank') && 
-        answerId === 'incorrect') {
-      // If this is a custom-evaluated answer that's incorrect, show a toast
-      toast.info("Keep trying! Your answer isn't quite right.");
-    }
   };
 
   // Handle moving to the next question
@@ -81,10 +75,48 @@ const TakeQuiz = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // End of quiz
+      // End of quiz - now we evaluate all answers
+      setIsEvaluating(true);
+      evaluateQuiz();
       setShowResults(true);
       setQuizCompleted(true);
     }
+  };
+
+  // Evaluate all answers at the end of the quiz
+  const evaluateQuiz = () => {
+    // For text-based and matching questions, we need to perform evaluation
+    // This is now done in bulk at the end of the quiz
+    const evaluatedAnswers = { ...userAnswers };
+    
+    questions.forEach(question => {
+      const userAnswer = evaluatedAnswers[question.id];
+      
+      // Skip questions that have no answer selected
+      if (!userAnswer) return;
+      
+      // For text-based questions, evaluate against correct answer
+      if ((question.type === 'short-answer' || question.type === 'fill-in-the-blank') && 
+          userAnswer !== 'incorrect') {
+        const correctAnswer = question.answers.find(a => a.isCorrect);
+        if (correctAnswer) {
+          // Simple string comparison - could be improved with more sophisticated matching
+          const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.text.trim().toLowerCase();
+          evaluatedAnswers[question.id] = isCorrect ? correctAnswer.id : 'incorrect';
+        }
+      }
+      
+      // For matching questions, evaluate the matching pattern
+      if (question.type === 'matching' && userAnswer !== 'incorrect' && question.correctMatching) {
+        const correctAnswer = question.answers.find(a => a.isCorrect);
+        if (correctAnswer) {
+          evaluatedAnswers[question.id] = userAnswer === correctAnswer.id ? correctAnswer.id : 'incorrect';
+        }
+      }
+    });
+    
+    setUserAnswers(evaluatedAnswers);
+    setIsEvaluating(false);
   };
 
   // Handle moving to the previous question
@@ -182,6 +214,16 @@ const TakeQuiz = () => {
 
         <div className="max-w-2xl mx-auto">
           <AnimatePresence mode="wait">
+            {isEvaluating && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center mb-4"
+              >
+                <p className="text-indigo-600 font-medium">Evaluating your answers...</p>
+              </motion.div>
+            )}
             {quizCompleted ? (
               <QuizResults 
                 key="results"

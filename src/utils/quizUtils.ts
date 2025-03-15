@@ -51,6 +51,7 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
     // Determine the question type
     let questionType: QuestionType = 'multiple-choice';
     
+    // First check the question_type field
     if (apiQ.question_type === 'true_false') {
       questionType = 'true-false';
     } else if (apiQ.question_type === 'fill_in_the_blank') {
@@ -65,10 +66,16 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       questionType = 'mixed';
     }
     
-    // Detect matching questions by correct_answer pattern (e.g., "a-4, b-1, c-3, d-2")
+    // Next check for matching pattern in correct_answer regardless of question_type
     if (apiQ.correct_answer && 
         /^[a-z]-\d+(?:,\s*[a-z]-\d+)*$/i.test(apiQ.correct_answer)) {
       questionType = 'matching';
+    }
+    
+    // For true/false questions detected by correct_answer
+    if ((apiQ.correct_answer === 'True' || apiQ.correct_answer === 'False') &&
+        (questionType === 'short-answer' || !apiQ.options || apiQ.options.length <= 1)) {
+      questionType = 'true-false';
     }
     
     // Ensure options is an array
@@ -88,6 +95,15 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         text: apiQ.correct_answer,
         isCorrect: true
       });
+      
+      // Add some incorrect answers for the question
+      for (let i = 0; i < 2; i++) {
+        answers.push({
+          id: generateId(),
+          text: `Incorrect matching ${i + 1}`,
+          isCorrect: false
+        });
+      }
       
       // Process the matching pairs
       if (options.length > 0) {
@@ -150,6 +166,12 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
           text: apiQ.correct_answer,
           isCorrect: true
         }];
+      }
+      
+      // Ensure at least one answer is marked as correct
+      if (!answers.some(a => a.isCorrect) && answers.length > 0) {
+        const correctAnswerIndex = Math.floor(Math.random() * answers.length);
+        answers[correctAnswerIndex].isCorrect = true;
       }
     }
 

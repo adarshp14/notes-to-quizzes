@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Question, Answer, MatchItem } from '@/utils/quizUtils';
@@ -38,6 +38,13 @@ const QuizCard: React.FC<QuizCardProps> = ({
   const correctAnswer = question.answers.find(a => a.isCorrect);
   const isCorrect = userAnswer && correctAnswer?.id === userAnswer;
   
+  // Reset state when question changes
+  useEffect(() => {
+    setTextAnswer('');
+    setMatchSelections({});
+    setShowExplanation(false);
+  }, [question.id]);
+  
   // Animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -50,20 +57,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
     setTextAnswer(e.target.value);
     
     if (question.answers.length > 0) {
-      // For text-based questions, we need to evaluate the answer
-      if (question.type === 'short-answer' || question.type === 'fill-in-the-blank') {
-        // Get the correct answer text
-        const correctAnswerText = correctAnswer?.text || '';
-        
-        // Compare user's answer with correct answer (case-insensitive)
-        const userAnswerIsCorrect = textAnswer.trim().toLowerCase() === correctAnswerText.trim().toLowerCase();
-        
-        // Use the correct answer ID but track that this is evaluated
-        onAnswerSelect(userAnswerIsCorrect ? correctAnswer?.id || '' : 'incorrect');
-      } else {
-        // For other question types, just use the first answer's ID
-        onAnswerSelect(question.answers[0].id);
-      }
+      // Just store the text answer - evaluation happens on submit
+      onAnswerSelect(e.target.value);
     }
   };
 
@@ -72,31 +67,22 @@ const QuizCard: React.FC<QuizCardProps> = ({
     const newSelections = { ...matchSelections, [item]: value };
     setMatchSelections(newSelections);
     
-    // Once all matches are made, evaluate the matching
+    // Check if all matches are made
     if (question.options && question.options.length > 0) {
       const allMatchesMade = Object.keys(newSelections).length === question.options.length;
       
       if (allMatchesMade) {
-        // Compare user's matching with the correct matching
-        if (correctAnswer && question.correctMatching) {
-          // Format user's selections to match the correct format (e.g., "a-1, b-2, c-3")
-          const userMatching = question.options
-            .map((item, index) => {
-              const letter = String.fromCharCode(97 + index);
-              const match = newSelections[item] || '';
-              return `${letter}-${match}`;
-            })
-            .join(', ');
-          
-          // Check if user's matching matches the correct matching (could be more flexible in real app)
-          const matchingIsCorrect = userMatching === question.correctMatching;
-          
-          // Use the correct answer ID but track that this is evaluated
-          onAnswerSelect(matchingIsCorrect ? correctAnswer.id : 'incorrect');
-        } else {
-          // If we don't have a correct matching format, just use the first answer
-          onAnswerSelect(question.answers[0].id);
-        }
+        // Format user's selections to match the correct format (e.g., "a-1, b-2, c-3")
+        const userMatching = question.options
+          .map((item, index) => {
+            const letter = String.fromCharCode(97 + index);
+            const match = newSelections[item] || '';
+            return `${letter}-${match}`;
+          })
+          .join(', ');
+        
+        // Store the formatted matching string
+        onAnswerSelect(userMatching);
       }
     }
   };
@@ -116,6 +102,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
     }
     
     const items = question.options;
+    // For matching questions, generate sequential numbers as match options
     const matches = Array.from({ length: items.length }, (_, i) => `${i + 1}`);
     
     return { items, matches };
@@ -232,10 +219,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
                 disabled={showResults}
               />
               
-              {showResults && (
+              {showResults && correctAnswer && (
                 <div className="mt-4 p-3 bg-gray-50 rounded border">
                   <p className="text-sm font-medium text-gray-700">Correct answer:</p>
-                  <p className="text-base text-green-700">{correctAnswer?.text}</p>
+                  <p className="text-base text-green-700">{correctAnswer.text}</p>
                 </div>
               )}
             </div>
@@ -255,10 +242,10 @@ const QuizCard: React.FC<QuizCardProps> = ({
                 disabled={showResults}
               />
               
-              {showResults && (
+              {showResults && correctAnswer && (
                 <div className="mt-4 p-3 bg-gray-50 rounded border">
                   <p className="text-sm font-medium text-gray-700">Sample answer:</p>
-                  <p className="text-base text-green-700">{correctAnswer?.text}</p>
+                  <p className="text-base text-green-700">{correctAnswer.text}</p>
                 </div>
               )}
             </div>
@@ -273,70 +260,107 @@ const QuizCard: React.FC<QuizCardProps> = ({
               
               {items.map((item, index) => (
                 <div key={index} className="mb-3 p-3 bg-white rounded border">
-                  <div className="mb-2">
-                    <span className="font-medium">{String.fromCharCode(97 + index)}) </span>
-                    <span>{item}</span>
-                  </div>
-                  
-                  {!showResults ? (
-                    <Select
-                      onValueChange={(value) => handleMatchChange(item, value)}
-                      value={matchSelections[item] || ""}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a match..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {matches.map((match, idx) => (
-                          <SelectItem key={idx} value={match}>
-                            {match}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                      <p className="text-sm text-green-700">
-                        <span className="font-medium">Correct match: </span>
-                        {question.correctMatching && 
-                         question.correctMatching.includes(String.fromCharCode(97 + index))
-                          ? question.correctMatching
-                              .split(',')
-                              .map(pair => pair.trim())
-                              .find(pair => pair.startsWith(String.fromCharCode(97 + index)))
-                              ?.split('-')[1] || '?'
-                          : index + 1}
-                      </p>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <span className="font-medium text-indigo-700">{String.fromCharCode(97 + index)}</span>
                     </div>
-                  )}
+                    <div className="flex-1">
+                      <div className="mb-2">
+                        <span className="font-medium">{item}</span>
+                      </div>
+                      
+                      {!showResults ? (
+                        <Select
+                          onValueChange={(value) => handleMatchChange(item, value)}
+                          value={matchSelections[item] || ""}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a match..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {matches.map((match, idx) => (
+                              <SelectItem key={idx} value={match}>
+                                {match}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                          <p className="text-sm text-green-700">
+                            <span className="font-medium">Correct match: </span>
+                            {question.correctMatching && 
+                             question.correctMatching.split(',').find(pair => pair.trim().startsWith(String.fromCharCode(97 + index)))
+                                ?.split('-')[1] || '?'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
               
-              {showResults && correctAnswer && (
-                <div className="mt-4 p-3 bg-gray-50 rounded border">
-                  <p className="text-sm font-medium text-gray-700">Correct matching:</p>
-                  <p className="text-base text-green-700">
-                    {question.correctMatching?.split(',').map(pair => {
-                      const [letter, number] = pair.trim().split('-');
-                      const itemIndex = letter.charCodeAt(0) - 97;
-                      const item = items[itemIndex] || `Item ${letter}`;
-                      return (
-                        <div key={letter} className="my-1">
-                          {letter}) {item} → Match {number}
+              {showResults && question.correctMatching && (
+                <div className="mt-4 p-3 bg-white rounded border">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Correct matching:</p>
+                  {question.correctMatching.split(',').map(pair => {
+                    const [letter, number] = pair.trim().split('-');
+                    const itemIndex = letter.charCodeAt(0) - 97;
+                    const item = items[itemIndex] || `Item ${letter}`;
+                    return (
+                      <div key={letter} className="my-1 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                          <span className="font-medium text-green-700">{letter}</span>
                         </div>
-                      );
-                    })}
-                  </p>
+                        <span>{item}</span>
+                        <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />
+                        <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
+                          <span className="font-medium text-purple-700">{number}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
         );
       
+      case 'mixed':
+        // For mixed questions, use the actual question type for rendering
+        // This is needed because 'mixed' is a category, not an actual question type
+        if (question.type === 'mixed' && question.answers.length > 0) {
+          // Determine actual type from answers or structure
+          let actualType = 'multiple-choice';
+          
+          if (question.answers.length === 2 && 
+              question.answers.some(a => a.text === 'True') && 
+              question.answers.some(a => a.text === 'False')) {
+            actualType = 'true-false';
+          } else if (question.correctMatching) {
+            actualType = 'matching';
+          } else if (question.text.includes('_____')) {
+            actualType = 'fill-in-the-blank';
+          } else if (question.answers.length === 1) {
+            actualType = 'short-answer';
+          }
+          
+          // Create a temporary question with the actual type
+          const typedQuestion = { ...question, type: actualType as any };
+          
+          // Render based on the actual type
+          return renderQuestionContent();
+        }
+        return (
+          <div className="p-4 border rounded-lg">
+            <p className="text-gray-500">This mixed question type couldn't be determined.</p>
+          </div>
+        );
+      
       default:
         return (
           <div className="p-4 border rounded-lg">
-            <p className="text-gray-500">This question type is not supported.</p>
+            <p className="text-gray-500">This question type ({question.type}) is not supported.</p>
           </div>
         );
     }
@@ -351,7 +375,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'short-answer': return 'Short Answer';
       case 'matching': return 'Matching';
       case 'mixed': return 'Mixed';
-      default: return type;
+      default: return type.charAt(0).toUpperCase() + type.slice(1).replace(/-/g, ' ');
     }
   };
 
@@ -442,7 +466,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
             !userAnswer && !showResults && "opacity-50"
           )}
         >
-          Next
+          {questionNumber === totalQuestions ? "Finish Quiz" : "Next"}
           <ChevronRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

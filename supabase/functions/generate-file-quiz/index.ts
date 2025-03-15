@@ -64,6 +64,21 @@ serve(async (req) => {
             `Item ${String.fromCharCode(97 + i)}`
           );
         }
+        
+        // Ensure the correct matching answer has actual matching pairs
+        // This helps with proper frontend rendering
+        if (question.options && question.options.length > 0) {
+          const matchPairs = [];
+          const letterCount = Math.min(question.options.length, 5);  // Limit to 5 pairs max
+          
+          for (let i = 0; i < letterCount; i++) {
+            const letter = String.fromCharCode(97 + i);
+            const number = (i + 1).toString();
+            matchPairs.push(`${letter}-${number}`);
+          }
+          
+          question.correct_answer = matchPairs.join(", ");
+        }
       }
       
       // If options is still null, initialize it as an empty array
@@ -80,6 +95,24 @@ serve(async (req) => {
       if (question.question_type === "short_answer" && 
           !question.options.includes(question.correct_answer)) {
         question.options.push(question.correct_answer);
+      }
+      
+      // Special handling for mixed question type
+      if (question.question_type === "mixed") {
+        // Let's explicitly assign an actual question type based on the structure
+        const isTrue = question.correct_answer === "True";
+        const isFalse = question.correct_answer === "False";
+        
+        if (isTrue || isFalse) {
+          question.question_type = "true_false";
+          question.options = ["True", "False"];
+        } else if (question.question.includes("_____")) {
+          question.question_type = "fill_in_the_blank";
+        } else if (question.options && question.options.length > 2) {
+          question.question_type = "multiple_choice";
+        } else {
+          question.question_type = "short_answer";
+        }
       }
     });
     
