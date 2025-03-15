@@ -61,6 +61,22 @@ const QuizCard: React.FC<QuizCardProps> = ({
     return text;
   };
 
+  // Ensure true/false questions have both options
+  const ensureTrueFalseOptions = () => {
+    if (question.type === 'true-false') {
+      // Check if both true and false options exist
+      const hasTrue = question.answers.some(a => a.text.toLowerCase() === 'true');
+      const hasFalse = question.answers.some(a => a.text.toLowerCase() === 'false');
+      
+      if (!hasTrue || !hasFalse) {
+        console.error("True/False question doesn't have proper options:", question);
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
   // This function renders different question types
   const renderQuestionContent = () => {
     switch (question.type) {
@@ -108,12 +124,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
         );
       
       case 'true-false':
-        // Ensure we have both True and False options for true-false questions
-        const trueAnswer = question.answers.find(a => a.text === 'True');
-        const falseAnswer = question.answers.find(a => a.text === 'False');
-        
-        if (!trueAnswer || !falseAnswer) {
-          console.error("True/False question doesn't have proper options:", question);
+        // Create standard true/false options if they don't exist
+        if (!ensureTrueFalseOptions()) {
           return (
             <div className="p-4 border rounded-lg">
               <p className="text-red-500">This true/false question is incorrectly formatted.</p>
@@ -121,9 +133,16 @@ const QuizCard: React.FC<QuizCardProps> = ({
           );
         }
         
+        // Sort to ensure "True" is always first
+        const sortedOptions = [...question.answers].sort((a, b) => {
+          if (a.text.toLowerCase() === 'true') return -1;
+          if (b.text.toLowerCase() === 'true') return 1;
+          return 0;
+        });
+        
         return (
           <div className="space-y-4">
-            {[trueAnswer, falseAnswer].map((answer) => (
+            {sortedOptions.map((answer) => (
               <motion.div
                 key={answer.id}
                 initial={{ opacity: 0.8, y: 5 }}

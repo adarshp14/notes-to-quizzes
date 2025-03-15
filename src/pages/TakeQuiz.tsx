@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import QuizCard from '@/components/QuizCard';
 import QuizResults from '@/components/QuizResults';
-import { Question, QuestionType } from '@/utils/quizUtils';
+import { Question, QuestionType, generateId } from '@/utils/quizUtils';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Brain } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,46 +45,81 @@ const TakeQuiz = () => {
       setIsLoading(true);
       const receivedQuestions = location.state.questions as any[];
       
-      const processedQuestions = receivedQuestions.map(question => {
-        let questionType: QuestionType = mapToQuestionType(question.type || '');
+      const processedQuestions = receivedQuestions.map((question, index) => {
+        // Convert the question type
+        let questionType: QuestionType = mapToQuestionType(question.question_type || question.type || '');
         
         // Special handling for true/false questions
-        if (question.options?.includes('True') && 
-            question.options?.includes('False') && 
-            question.options?.length === 2) {
+        const isTrueFalseQuestion = 
+          (questionType === 'true-false') || 
+          ((question.options?.includes('True') && question.options?.includes('False') && question.options?.length === 2)) ||
+          ((question.correct_answer === 'True' || question.correct_answer === 'False'));
+        
+        if (isTrueFalseQuestion) {
           questionType = 'true-false';
           
-          // Ensure we have both True and False answers
-          if (question.answers?.length !== 2) {
-            question.answers = [
-              {
-                id: `tf-true-${Math.random().toString(36).substring(2, 9)}`,
-                text: 'True',
-                isCorrect: question.correct_answer === 'True'
-              },
-              {
-                id: `tf-false-${Math.random().toString(36).substring(2, 9)}`,
-                text: 'False',
-                isCorrect: question.correct_answer === 'False'
-              }
-            ];
+          // Ensure we have both True and False options
+          const trueAnswer = {
+            id: `tf-true-${generateId()}`,
+            text: 'True',
+            isCorrect: question.correct_answer === 'True'
+          };
+          
+          const falseAnswer = {
+            id: `tf-false-${generateId()}`,
+            text: 'False',
+            isCorrect: question.correct_answer === 'False'
+          };
+          
+          // Assign answers directly
+          question.answers = [trueAnswer, falseAnswer];
+        } 
+        else if (!question.answers || question.answers.length === 0) {
+          // Generate answers for questions without them
+          const options = question.options || [];
+          
+          if (options.length > 0) {
+            question.answers = options.map((option: string, idx: number) => ({
+              id: `${index}-${idx}`,
+              text: option,
+              isCorrect: option === question.correct_answer
+            }));
+          } else if (question.correct_answer) {
+            // At least include the correct answer
+            question.answers = [{
+              id: `${index}-0`,
+              text: question.correct_answer,
+              isCorrect: true
+            }];
+          } else {
+            // Empty placeholder
+            question.answers = [{
+              id: `${index}-0`,
+              text: "No answer provided",
+              isCorrect: true
+            }];
           }
         }
         
-        // Ignore matching and mixed for now
-        if (questionType === 'matching' || questionType === 'mixed') {
-          questionType = 'multiple-choice';
+        // Make sure answers have proper IDs
+        if (question.answers) {
+          question.answers = question.answers.map((answer: any, aIdx: number) => {
+            if (!answer.id) {
+              return {
+                ...answer,
+                id: `${index}-${aIdx}`
+              };
+            }
+            return answer;
+          });
         }
         
-        const hasCorrectAnswer = question.answers?.some(answer => answer.isCorrect);
-        
-        if (!hasCorrectAnswer && question.answers?.length > 0) {
-          const updatedAnswers = [...question.answers];
-          updatedAnswers[0] = { ...updatedAnswers[0], isCorrect: true };
-          return { ...question, answers: updatedAnswers, type: questionType };
-        }
-        
-        return { ...question, type: questionType };
+        return { 
+          ...question, 
+          id: question.id || `${index + 1}`,
+          type: questionType,
+          answers: question.answers || []
+        };
       });
       
       // Filter out any mixed or matching questions for now

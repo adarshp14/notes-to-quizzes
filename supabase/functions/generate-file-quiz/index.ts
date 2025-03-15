@@ -45,9 +45,7 @@ serve(async (req) => {
     // Ensure each question has a valid options array and correct question type
     questions.forEach(question => {
       // Fix true/false questions that might be incorrectly labeled
-      if ((question.correct_answer === "True" || question.correct_answer === "False") && 
-          (question.options === null || question.options?.length === 0 || 
-           question.options?.length === 1 || question.question_type === "short_answer")) {
+      if ((question.correct_answer === "True" || question.correct_answer === "False")) {
         question.options = ["True", "False"];
         question.question_type = "true_false";
       }
