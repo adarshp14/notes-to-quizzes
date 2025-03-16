@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
@@ -60,7 +61,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
   const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setTextAnswer(e.target.value);
     
-    if (question.answers.length > 0) {
+    if (question.answers && question.answers.length > 0) {
       onAnswerSelect(e.target.value);
     }
   };
@@ -74,6 +75,11 @@ const QuizCard: React.FC<QuizCardProps> = ({
 
   const ensureTrueFalseOptions = () => {
     if (question.type === 'true-false') {
+      if (!question.answers || question.answers.length === 0) {
+        console.error("True/False question has no answers:", question);
+        return false;
+      }
+      
       const hasTrue = question.answers.some(a => a.text.toLowerCase() === 'true');
       const hasFalse = question.answers.some(a => a.text.toLowerCase() === 'false');
       
@@ -90,12 +96,15 @@ const QuizCard: React.FC<QuizCardProps> = ({
     console.log(`Rendering question content for type: ${question.type}`);
     console.log("Question answers:", question.answers);
     
+    // Ensure question.answers is always an array
+    const answers = Array.isArray(question.answers) ? question.answers : [];
+    
     switch (question.type) {
       case 'multiple-choice':
         return (
           <div className="space-y-4">
-            {question.answers && question.answers.length > 0 ? (
-              question.answers.map((answer, index) => {
+            {answers && answers.length > 0 ? (
+              answers.map((answer, index) => {
                 console.log(`Rendering option ${index}:`, answer);
                 return (
                 <motion.div
@@ -140,13 +149,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
                 <div className="flex items-center">
                   <AlertTriangle className="w-5 h-5 text-yellow-500 mr-2" />
                   <p className="text-yellow-800 dark:text-yellow-200">
-                    No answer options available for this question. Debug info: {JSON.stringify({
-                      questionId: question.id,
-                      questionType: question.type,
-                      answersArray: question.answers,
-                      isAnswersNull: question.answers === null,
-                      isAnswersUndefined: question.answers === undefined
-                    })}
+                    No answer options available for this question.
                   </p>
                 </div>
               </div>

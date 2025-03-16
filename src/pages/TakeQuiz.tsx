@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -100,8 +101,8 @@ const TakeQuiz = () => {
             cleanAnswer: question.clean_answer
           });
           
-          if (options.length > 0) {
-            let correctIndex = 0; // Default to first option if we can't determine
+          if (options && options.length > 0) {
+            let correctIndex = -1; // Default to first option if we can't determine
             const letterPrefix = question.correct_letter || extractLetterPrefix(question.correct_answer);
             
             if (letterPrefix) {
@@ -114,7 +115,8 @@ const TakeQuiz = () => {
             } else if (question.correct_answer) {
               const cleanedCorrectAnswer = question.clean_answer || cleanAnswerText(question.correct_answer);
               for (let i = 0; i < options.length; i++) {
-                if (cleanAnswerText(options[i]).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
+                const optionText = cleanAnswerText(options[i]);
+                if (optionText.toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
                   correctIndex = i;
                   break;
                 }
@@ -122,25 +124,37 @@ const TakeQuiz = () => {
               console.log(`Using text matching for correct index: ${correctIndex}, Answer: "${cleanedCorrectAnswer}"`);
             }
             
+            if (correctIndex === -1) {
+              // If we still couldn't find the correct answer, default to the first option
+              correctIndex = 0;
+            }
+            
             answers = options.map((option: string, idx: number) => {
               return {
                 id: `${index}-${idx}`,
-                text: option,
+                text: cleanAnswerText(option) || `Option ${idx + 1}`,
                 isCorrect: idx === correctIndex
               };
             });
           } else if (question.correct_answer) {
+            // If there are no options but there is a correct answer, create a single option
             answers = [{
               id: `${index}-0`,
-              text: cleanAnswerText(question.correct_answer),
+              text: cleanAnswerText(question.correct_answer) || "Correct Answer",
               isCorrect: true
             }];
-          } else {
-            answers = [{
-              id: `${index}-fallback`,
-              text: "No answer options provided",
-              isCorrect: true
-            }];
+          }
+          
+          // Fallback if no answers were created
+          if (!answers || answers.length === 0) {
+            console.warn(`Creating fallback answers for Q${index + 1}`);
+            answers = [
+              {
+                id: `${index}-fallback`,
+                text: "No answer options available",
+                isCorrect: true
+              }
+            ];
           }
           
           console.log(`Final answers for Q${index + 1}:`, answers);
@@ -157,7 +171,7 @@ const TakeQuiz = () => {
           const options = question.options || [];
           let answers = [];
           
-          if (options.length > 0) {
+          if (options && options.length > 0) {
             let correctIndex = 0; // Default to first
             const cleanedCorrectAnswer = cleanAnswerText(question.correct_answer);
             
@@ -173,14 +187,14 @@ const TakeQuiz = () => {
             answers = options.map((option: string, idx: number) => {
               return {
                 id: `${index}-${idx}`,
-                text: option,
+                text: cleanAnswerText(option) || `Option ${idx + 1}`,
                 isCorrect: idx === correctIndex
               };
             });
           } else if (question.correct_answer) {
             answers = [{
               id: `${index}-0`,
-              text: question.correct_answer,
+              text: cleanAnswerText(question.correct_answer) || "Correct Answer",
               isCorrect: true
             }];
           } else {
