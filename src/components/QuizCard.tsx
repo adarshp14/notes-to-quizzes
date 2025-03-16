@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,6 +8,8 @@ import { Question, Answer, QuestionType } from '@/utils/quizUtils';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface QuizCardProps {
   question: Question;
@@ -82,44 +85,50 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'multiple-choice':
         return (
           <div className="space-y-4">
-            {question.answers.map((answer, index) => (
-              <motion.div
-                key={answer.id}
-                initial={{ opacity: 0.8, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={cn(
-                  "relative p-4 border rounded-lg transition-all duration-200 cursor-pointer transform hover:translate-y-[-2px]",
-                  userAnswer === answer.id
-                    ? showResults
-                      ? isCorrect
-                        ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
-                        : "border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-600"
-                      : "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-600"
-                    : showResults && answer.isCorrect
-                    ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
-                    : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
-                )}
-                onClick={() => onAnswerSelect(answer.id)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
-                    <span className="text-base font-medium dark:text-gray-200">{answer.text}</span>
-                  </div>
-
-                  {showResults && (
-                    <div className="ml-3 flex-shrink-0">
-                      {answer.isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400" />
-                      ) : userAnswer === answer.id ? (
-                        <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                      ) : null}
-                    </div>
+            {question.answers && question.answers.length > 0 ? (
+              question.answers.map((answer, index) => (
+                <motion.div
+                  key={answer.id}
+                  initial={{ opacity: 0.8, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={cn(
+                    "relative p-4 border rounded-lg transition-all duration-200 cursor-pointer transform hover:translate-y-[-2px]",
+                    userAnswer === answer.id
+                      ? showResults
+                        ? isCorrect
+                          ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
+                          : "border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-600"
+                        : "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-600"
+                      : showResults && answer.isCorrect
+                      ? "border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-600"
+                      : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                   )}
-                </div>
-              </motion.div>
-            ))}
+                  onClick={() => onAnswerSelect(answer.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
+                      <span className="text-base font-medium dark:text-gray-200">{answer.text}</span>
+                    </div>
+
+                    {showResults && (
+                      <div className="ml-3 flex-shrink-0">
+                        {answer.isCorrect ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400" />
+                        ) : userAnswer === answer.id ? (
+                          <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="p-4 border rounded-lg border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700">
+                <p className="text-yellow-800 dark:text-yellow-200">No answer options available for this question.</p>
+              </div>
+            )}
           </div>
         );
       

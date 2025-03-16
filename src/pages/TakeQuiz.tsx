@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -213,6 +214,13 @@ const TakeQuiz = () => {
       const filteredQuestions = processedQuestions.filter(q => 
         q.type !== 'matching' && q.type !== 'mixed'
       );
+      
+      // Add debug
+      console.log("Processed questions:", filteredQuestions);
+      filteredQuestions.forEach((q, i) => {
+        console.log(`Question ${i+1} (${q.type}):`, q.text);
+        console.log(`Answers for Q${i+1}:`, q.answers);
+      });
       
       setQuestions(filteredQuestions);
       
