@@ -44,6 +44,12 @@ const TakeQuiz = () => {
     return text.replace(/^[a-z][\)\.]?\s*/i, '').trim();
   };
 
+  const extractLetterPrefix = (text: string): string | null => {
+    if (!text) return null;
+    const match = text.match(/^([a-d])[.)\s]/i);
+    return match ? match[1].toUpperCase() : null;
+  };
+
   useEffect(() => {
     if (location.state?.questions) {
       setIsLoading(true);
@@ -81,6 +87,53 @@ const TakeQuiz = () => {
             explanation: question.explanation || ''
           };
         } 
+        else if (questionType === 'multiple-choice') {
+          const options = question.options || [];
+          let answers = [];
+          
+          if (options.length > 0) {
+            const letterPrefix = question.correct_letter || extractLetterPrefix(question.correct_answer);
+            let correctIndex = -1;
+            
+            if (letterPrefix) {
+              correctIndex = letterPrefix.charCodeAt(0) - 65;
+            } else {
+              const cleanedCorrectAnswer = question.clean_answer || cleanAnswerText(question.correct_answer);
+              for (let i = 0; i < options.length; i++) {
+                if (cleanAnswerText(options[i]).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
+                  correctIndex = i;
+                  break;
+                }
+              }
+            }
+            
+            if (correctIndex < 0 || correctIndex >= options.length) {
+              correctIndex = 0;
+            }
+            
+            answers = options.map((option: string, idx: number) => {
+              return {
+                id: `${index}-${idx}`,
+                text: option,
+                isCorrect: idx === correctIndex
+              };
+            });
+          } else if (question.correct_answer) {
+            answers = [{
+              id: `${index}-0`,
+              text: cleanAnswerText(question.correct_answer),
+              isCorrect: true
+            }];
+          }
+          
+          return { 
+            id: question.id || `${index + 1}`,
+            text: question.question || question.text,
+            type: questionType,
+            answers: answers,
+            explanation: question.explanation || ''
+          };
+        }
         else if (!question.answers || question.answers.length === 0) {
           const options = question.options || [];
           let answers = [];

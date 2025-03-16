@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -83,7 +82,7 @@ const QuizCard: React.FC<QuizCardProps> = ({
       case 'multiple-choice':
         return (
           <div className="space-y-4">
-            {question.answers.map((answer) => (
+            {question.answers.map((answer, index) => (
               <motion.div
                 key={answer.id}
                 initial={{ opacity: 0.8, y: 5 }}
@@ -105,7 +104,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-base font-medium dark:text-gray-200">{answer.text}</p>
+                    <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
+                    <span className="text-base font-medium dark:text-gray-200">{answer.text}</span>
                   </div>
 
                   {showResults && (

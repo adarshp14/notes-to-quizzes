@@ -77,13 +77,25 @@ serve(async (req) => {
         question.options.push(question.correct_answer);
       }
       
-      // Strip prefixes like "a)", "b)", "c)" from correct_answer to match the raw option text
-      if (question.correct_answer && 
-          (question.correct_answer.match(/^[a-z]\)/) || 
-           question.correct_answer.match(/^[a-z]\./))) {
-        const cleanedAnswer = question.correct_answer.replace(/^[a-z][\)\.]?\s*/, '');
-        if (question.options.includes(cleanedAnswer)) {
-          question.correct_answer = cleanedAnswer;
+      // For multiple-choice questions, extract letter prefix if present (A, B, C, D)
+      if (question.question_type === "multiple_choice" && question.correct_answer) {
+        // Extract the letter prefix (A, B, C, D) if it exists
+        const letterMatch = question.correct_answer.match(/^([a-d])[.)\s]/i);
+        if (letterMatch) {
+          // Convert to uppercase for consistency
+          const letterPrefix = letterMatch[1].toUpperCase();
+          // Store both the letter prefix and the full answer
+          question.correct_letter = letterPrefix;
+          // Store index based on letter (A=0, B=1, C=2, D=3)
+          const letterIndex = letterPrefix.charCodeAt(0) - 65;
+          if (letterIndex >= 0 && letterIndex < question.options.length) {
+            // Also store the clean answer without prefix
+            const cleanedAnswer = question.correct_answer.replace(/^[a-d][.)\s]+/i, '').trim();
+            question.clean_answer = cleanedAnswer;
+          }
+        } else {
+          // If no letter prefix, just clean any existing format like "a)", "a."
+          question.clean_answer = question.correct_answer.replace(/^[a-z][\)\.]?\s*/i, '').trim();
         }
       }
       
@@ -182,10 +194,16 @@ function generateQuestions(
         }
       }
       
+      // For multiple-choice, add the letter prefix to the correct answer
+      const letterPrefix = String.fromCharCode(65 + correctIndex); // A, B, C, D
+      const correctAnswerWithPrefix = `${letterPrefix}) ${optionsArray[correctIndex]}`;
+      
       questions.push({
         question: questionText,
         options: optionsArray,
-        correct_answer: optionsArray[correctIndex],
+        correct_answer: correctAnswerWithPrefix,
+        correct_letter: letterPrefix, // Store the letter prefix for easier matching
+        clean_answer: optionsArray[correctIndex], // Store the clean answer without prefix
         explanation: `This is an explanation about ${topic}.`,
         question_type: "multiple_choice",
         questionNumber: i + 1  // Add question number starting from 1

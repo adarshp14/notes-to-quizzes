@@ -24,6 +24,7 @@ export interface Question {
   options?: string[];
   matchItems?: MatchItem[];
   correctMatching?: string;
+  correctLetter?: string;
 }
 
 export interface Quiz {
@@ -37,6 +38,8 @@ interface ApiQuestion {
   question: string;
   options: string[] | null;
   correct_answer: string;
+  correct_letter?: string;
+  clean_answer?: string;
   explanation: string;
   question_type: string;
 }
@@ -48,6 +51,12 @@ export const generateId = () => {
 export const cleanAnswerText = (text: string): string => {
   if (!text) return '';
   return text.replace(/^[a-z][\)\.]?\s*/i, '').trim();
+};
+
+export const extractLetterPrefix = (text: string): string | null => {
+  if (!text) return null;
+  const match = text.match(/^([a-d])[.)\s]/i);
+  return match ? match[1].toUpperCase() : null;
 };
 
 export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
@@ -89,9 +98,6 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
     // Ensure options is an array
     const options = apiQ.options || [];
     
-    // Clean the correct answer to remove any prefixes like "c)"
-    const cleanedCorrectAnswer = cleanAnswerText(apiQ.correct_answer);
-    
     let answers: Answer[] = [];
     
     // Process answers based on question type
@@ -118,55 +124,60 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
         isCorrect: true
       }];
     }
-    else {
-      // For multiple-choice or other types
+    else if (questionType === 'multiple-choice') {
+      // For multiple-choice questions
       if (options.length > 0) {
-        // Map options to answers, marking the correct one
-        answers = options.map(option => {
-          const cleanedOption = cleanAnswerText(option);
-          return {
-            id: generateId(),
-            text: option,
-            isCorrect: cleanedOption === cleanedCorrectAnswer || option === apiQ.correct_answer
-          };
-        });
+        // Check for letter-based answer (A, B, C, D)
+        const letterPrefix = apiQ.correct_letter || extractLetterPrefix(apiQ.correct_answer);
+        let correctIndex = -1;
         
-        // If no answer is marked as correct, try to find a case-insensitive match
-        if (!answers.some(a => a.isCorrect) && cleanedCorrectAnswer) {
-          for (let i = 0; i < answers.length; i++) {
-            if (cleanAnswerText(answers[i].text).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
-              answers[i].isCorrect = true;
+        if (letterPrefix) {
+          // Convert letter to index (A=0, B=1, etc.)
+          correctIndex = letterPrefix.charCodeAt(0) - 65;
+          // Ensure the index is valid
+          if (correctIndex < 0 || correctIndex >= options.length) {
+            correctIndex = -1; // Reset if invalid
+          }
+        }
+        
+        // If letter-based matching failed, try text-based matching
+        if (correctIndex === -1) {
+          const cleanedCorrectAnswer = apiQ.clean_answer || cleanAnswerText(apiQ.correct_answer);
+          
+          // Find match by comparing cleaned text
+          for (let i = 0; i < options.length; i++) {
+            if (cleanAnswerText(options[i]).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
+              correctIndex = i;
               break;
             }
           }
         }
+        
+        // Default to first option if still not found
+        if (correctIndex === -1 && options.length > 0) {
+          correctIndex = 0;
+        }
+        
+        // Create answer objects from options
+        answers = options.map((option, idx) => {
+          return {
+            id: generateId(),
+            text: option,
+            isCorrect: idx === correctIndex
+          };
+        });
       } else if (apiQ.correct_answer) {
         // If no options but we have a correct answer, create it
         answers = [{
           id: generateId(),
-          text: apiQ.correct_answer,
+          text: cleanAnswerText(apiQ.correct_answer),
           isCorrect: true
         }];
       }
-      
-      // Ensure at least one answer is marked as correct
-      if (!answers.some(a => a.isCorrect) && answers.length > 0) {
-        // If the correct_answer exists but doesn't match options, add it
-        if (apiQ.correct_answer && !options.includes(apiQ.correct_answer)) {
-          answers.push({
-            id: generateId(),
-            text: apiQ.correct_answer,
-            isCorrect: true
-          });
-        } else {
-          // Otherwise, mark the first answer as correct
-          const correctAnswerIndex = Math.floor(Math.random() * answers.length);
-          answers[correctAnswerIndex].isCorrect = true;
-        }
-      }
     }
 
-    return {
+    // Create question object
+    const question: Question = {
       id: generateId(),
       text: apiQ.question,
       type: questionType,
@@ -174,6 +185,13 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       options,
       explanation: apiQ.explanation
     };
+    
+    // Add letter-based information for multiple-choice questions
+    if (questionType === 'multiple-choice' && apiQ.correct_letter) {
+      question.correctLetter = apiQ.correct_letter;
+    }
+
+    return question;
   });
 };
 
