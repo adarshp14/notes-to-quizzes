@@ -59,13 +59,34 @@ serve(async (req) => {
         question.options = ["True", "False"];
       }
       
-      // If options is still null, initialize it as an empty array
-      if (!question.options) {
-        if (question.correct_answer) {
-          // For short_answer or other types with a single correct answer but no options
-          question.options = [question.correct_answer];
-        } else {
-          question.options = [];
+      // CRITICAL: If options is still null or empty, initialize it with default options
+      if (!question.options || question.options.length === 0) {
+        console.log(`Question ${index + 1} has no options, creating defaults`);
+        
+        if (question.question_type === "multiple_choice") {
+          // For multiple choice, create default options with letter prefixes
+          question.options = [
+            "First option",
+            "Second option",
+            "Third option",
+            "Fourth option"
+          ].slice(0, answerOptions || 4);
+          
+          // Default to first option as correct
+          const letterPrefix = "A";
+          question.correct_answer = `${letterPrefix}) ${question.options[0]}`;
+          question.correct_letter = letterPrefix;
+          question.clean_answer = question.options[0];
+        } 
+        else if (question.question_type === "true_false") {
+          question.options = ["True", "False"];
+          question.correct_answer = "True"; // Default
+        }
+        else if (question.question_type === "short_answer" || question.question_type === "fill_in_the_blank") {
+          // For short answer or fill in blank, create a default correct answer
+          const correctAnswer = question.correct_answer || `Default answer for "${question.question}"`;
+          question.options = [correctAnswer];
+          question.correct_answer = correctAnswer;
         }
       }
       
@@ -101,42 +122,6 @@ serve(async (req) => {
       // Temporarily convert mixed types to multiple-choice and ignore matching
       if (question.question_type === "mixed" || question.question_type === "matching") {
         question.question_type = "multiple_choice";
-      }
-      
-      // Ensure all questions have options array
-      if (!question.options || question.options.length === 0) {
-        console.warn(`Question ${index + 1} has no options, creating default options`);
-        
-        if (question.question_type === "multiple_choice") {
-          // For multiple choice, create 4 default options
-          const optionsCount = answerOptions || 4;
-          question.options = [];
-          for (let i = 0; i < optionsCount; i++) {
-            question.options.push(i === 0 ? 
-              `Correct answer for "${question.question}"` : 
-              `Incorrect option ${i} for "${question.question}"`
-            );
-          }
-          // Set first option as correct by default
-          question.correct_answer = `A) ${question.options[0]}`;
-          question.correct_letter = "A";
-          question.clean_answer = question.options[0];
-        } 
-        else if (question.question_type === "true_false") {
-          question.options = ["True", "False"];
-          // If no correct answer already set, default to True
-          if (!question.correct_answer) {
-            question.correct_answer = "True";
-          }
-        }
-        else if (question.question_type === "short_answer" || question.question_type === "fill_in_the_blank") {
-          // For short answer or fill in blank, use the correct answer as the option
-          const correctAnswer = question.correct_answer || `Default answer for "${question.question}"`;
-          question.options = [correctAnswer];
-          if (!question.correct_answer) {
-            question.correct_answer = correctAnswer;
-          }
-        }
       }
     });
     

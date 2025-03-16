@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -102,17 +101,18 @@ const TakeQuiz = () => {
           });
           
           if (options && options.length > 0) {
-            let correctIndex = -1; // Default to first option if we can't determine
+            let correctIndex = 0; // Default to first option if we can't determine
             const letterPrefix = question.correct_letter || extractLetterPrefix(question.correct_answer);
             
             if (letterPrefix) {
               correctIndex = letterPrefix.charCodeAt(0) - 65;
               if (correctIndex < 0 || correctIndex >= options.length) {
-                console.warn(`Invalid letter index ${correctIndex} for Q${index+1}, defaulting to 0`);
+                console.log(`Invalid letter index ${correctIndex} for Q${index+1}, defaulting to 0`);
                 correctIndex = 0;
               }
               console.log(`Using letter prefix "${letterPrefix}" for correct index: ${correctIndex}`);
-            } else if (question.correct_answer) {
+            } 
+            else if (question.correct_answer) {
               const cleanedCorrectAnswer = question.clean_answer || cleanAnswerText(question.correct_answer);
               for (let i = 0; i < options.length; i++) {
                 const optionText = cleanAnswerText(options[i]);
@@ -124,11 +124,6 @@ const TakeQuiz = () => {
               console.log(`Using text matching for correct index: ${correctIndex}, Answer: "${cleanedCorrectAnswer}"`);
             }
             
-            if (correctIndex === -1) {
-              // If we still couldn't find the correct answer, default to the first option
-              correctIndex = 0;
-            }
-            
             answers = options.map((option: string, idx: number) => {
               return {
                 id: `${index}-${idx}`,
@@ -136,23 +131,40 @@ const TakeQuiz = () => {
                 isCorrect: idx === correctIndex
               };
             });
-          } else if (question.correct_answer) {
-            // If there are no options but there is a correct answer, create a single option
+            
+            console.log(`Created ${answers.length} answers for Q${index + 1} with correct index ${correctIndex}`);
+          } 
+          else if (question.correct_answer) {
             answers = [{
               id: `${index}-0`,
               text: cleanAnswerText(question.correct_answer) || "Correct Answer",
               isCorrect: true
             }];
+            console.log(`Created single answer for Q${index + 1} from correct_answer`);
           }
           
-          // Fallback if no answers were created
           if (!answers || answers.length === 0) {
-            console.warn(`Creating fallback answers for Q${index + 1}`);
+            console.log(`No answers were created for Q${index + 1}, creating fallbacks`);
             answers = [
               {
-                id: `${index}-fallback`,
-                text: "No answer options available",
+                id: `${index}-fallback-0`,
+                text: "Option A",
                 isCorrect: true
+              },
+              {
+                id: `${index}-fallback-1`,
+                text: "Option B",
+                isCorrect: false
+              },
+              {
+                id: `${index}-fallback-2`,
+                text: "Option C",
+                isCorrect: false
+              },
+              {
+                id: `${index}-fallback-3`,
+                text: "Option D",
+                isCorrect: false
               }
             ];
           }
