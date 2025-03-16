@@ -45,6 +45,11 @@ export const generateId = () => {
   return Math.random().toString(36).substring(2, 9);
 };
 
+export const cleanAnswerText = (text: string): string => {
+  if (!text) return '';
+  return text.replace(/^[a-z][\)\.]?\s*/i, '').trim();
+};
+
 export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
   return apiQuestions.map(apiQ => {
     // Determine the question type based on API response
@@ -84,6 +89,9 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
     // Ensure options is an array
     const options = apiQ.options || [];
     
+    // Clean the correct answer to remove any prefixes like "c)"
+    const cleanedCorrectAnswer = cleanAnswerText(apiQ.correct_answer);
+    
     let answers: Answer[] = [];
     
     // Process answers based on question type
@@ -114,11 +122,24 @@ export const convertApiResponsesToQuestions = (apiQuestions: ApiQuestion[]): Que
       // For multiple-choice or other types
       if (options.length > 0) {
         // Map options to answers, marking the correct one
-        answers = options.map(option => ({
-          id: generateId(),
-          text: option,
-          isCorrect: option === apiQ.correct_answer
-        }));
+        answers = options.map(option => {
+          const cleanedOption = cleanAnswerText(option);
+          return {
+            id: generateId(),
+            text: option,
+            isCorrect: cleanedOption === cleanedCorrectAnswer || option === apiQ.correct_answer
+          };
+        });
+        
+        // If no answer is marked as correct, try to find a case-insensitive match
+        if (!answers.some(a => a.isCorrect) && cleanedCorrectAnswer) {
+          for (let i = 0; i < answers.length; i++) {
+            if (cleanAnswerText(answers[i].text).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
+              answers[i].isCorrect = true;
+              break;
+            }
+          }
+        }
       } else if (apiQ.correct_answer) {
         // If no options but we have a correct answer, create it
         answers = [{

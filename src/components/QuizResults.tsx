@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, RefreshCw, Save, DownloadCloud, HelpCircle, Trophy, BookOpen, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Question, createQuiz, saveQuiz, generatePDF } from '@/utils/quizUtils';
+import { Question, createQuiz, saveQuiz, generatePDF, cleanAnswerText } from '@/utils/quizUtils';
 import { Progress } from '@/components/ui/progress';
 
 interface QuizResultsProps {

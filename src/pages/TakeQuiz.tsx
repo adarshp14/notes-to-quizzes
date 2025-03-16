@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,16 +39,19 @@ const TakeQuiz = () => {
     }
   };
 
+  const cleanAnswerText = (text: string): string => {
+    if (!text) return '';
+    return text.replace(/^[a-z][\)\.]?\s*/i, '').trim();
+  };
+
   useEffect(() => {
     if (location.state?.questions) {
       setIsLoading(true);
       const receivedQuestions = location.state.questions as any[];
       
       const processedQuestions = receivedQuestions.map((question, index) => {
-        // Convert the question type
         let questionType: QuestionType = mapToQuestionType(question.question_type || question.type || '');
         
-        // Special handling for true/false questions
         const isTrueFalseQuestion = 
           (questionType === 'true-false') || 
           ((question.options?.includes('True') && question.options?.includes('False') && question.options?.length === 2)) ||
@@ -58,7 +60,6 @@ const TakeQuiz = () => {
         if (isTrueFalseQuestion) {
           questionType = 'true-false';
           
-          // Always create both True and False answers for true/false questions
           const answers = [
             {
               id: `tf-true-${index}`,
@@ -72,7 +73,6 @@ const TakeQuiz = () => {
             }
           ];
 
-          // Return the question with properly formatted answers
           return {
             id: question.id || `${index + 1}`,
             text: question.question || question.text,
@@ -82,25 +82,36 @@ const TakeQuiz = () => {
           };
         } 
         else if (!question.answers || question.answers.length === 0) {
-          // Generate answers for non-true/false questions without them
           const options = question.options || [];
           let answers = [];
           
           if (options.length > 0) {
-            answers = options.map((option: string, idx: number) => ({
-              id: `${index}-${idx}`,
-              text: option,
-              isCorrect: option === question.correct_answer
-            }));
+            const cleanedCorrectAnswer = cleanAnswerText(question.correct_answer);
+            
+            answers = options.map((option: string, idx: number) => {
+              const cleanedOption = cleanAnswerText(option);
+              return {
+                id: `${index}-${idx}`,
+                text: option,
+                isCorrect: cleanedOption === cleanedCorrectAnswer || option === question.correct_answer
+              };
+            });
+            
+            if (!answers.some(a => a.isCorrect) && cleanedCorrectAnswer) {
+              for (let i = 0; i < answers.length; i++) {
+                if (cleanAnswerText(answers[i].text).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
+                  answers[i].isCorrect = true;
+                  break;
+                }
+              }
+            }
           } else if (question.correct_answer) {
-            // At least include the correct answer
             answers = [{
               id: `${index}-0`,
               text: question.correct_answer,
               isCorrect: true
             }];
           } else {
-            // Empty placeholder
             answers = [{
               id: `${index}-0`,
               text: "No answer provided",
@@ -108,7 +119,6 @@ const TakeQuiz = () => {
             }];
           }
           
-          // Make sure answers have proper IDs
           answers = answers.map((answer: any, aIdx: number) => {
             if (!answer.id) {
               return {
@@ -128,7 +138,6 @@ const TakeQuiz = () => {
           };
         }
         
-        // For questions that already have answers array
         const formattedAnswers = question.answers.map((answer: any, aIdx: number) => {
           if (!answer.id) {
             return {
@@ -148,7 +157,6 @@ const TakeQuiz = () => {
         };
       });
       
-      // Filter out any mixed or matching questions for now
       const filteredQuestions = processedQuestions.filter(q => 
         q.type !== 'matching' && q.type !== 'mixed'
       );
@@ -201,7 +209,7 @@ const TakeQuiz = () => {
           userAnswer !== 'incorrect') {
         const correctAnswer = question.answers.find(a => a.isCorrect);
         if (correctAnswer) {
-          const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.text.trim().toLowerCase();
+          const isCorrect = cleanAnswerText(userAnswer).toLowerCase() === cleanAnswerText(correctAnswer.text).toLowerCase();
           evaluatedAnswers[question.id] = isCorrect ? correctAnswer.id : 'incorrect';
         }
       }

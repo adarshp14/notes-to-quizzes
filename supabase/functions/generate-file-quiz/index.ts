@@ -77,6 +77,16 @@ serve(async (req) => {
         question.options.push(question.correct_answer);
       }
       
+      // Strip prefixes like "a)", "b)", "c)" from correct_answer to match the raw option text
+      if (question.correct_answer && 
+          (question.correct_answer.match(/^[a-z]\)/) || 
+           question.correct_answer.match(/^[a-z]\./))) {
+        const cleanedAnswer = question.correct_answer.replace(/^[a-z][\)\.]?\s*/, '');
+        if (question.options.includes(cleanedAnswer)) {
+          question.correct_answer = cleanedAnswer;
+        }
+      }
+      
       // Temporarily convert mixed types to multiple-choice and ignore matching
       if (question.question_type === "mixed" || question.question_type === "matching") {
         question.question_type = "multiple_choice";
