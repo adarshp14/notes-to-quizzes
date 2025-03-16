@@ -40,7 +40,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
-  const baseUrl = import.meta.env.VITE_API_URL;
 
   const mapQuestionTypeToApi = (type: QuestionType): string => {
     switch(type) {
@@ -103,7 +102,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     setCurrentQuiz(null);
 
     try {
-      const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+      const response = await fetch(`/api/generate-text-quiz`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,7 +159,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     try {
       if (file.type === 'text/plain') {
         const textContent = await file.text();
-        const response = await fetch(`${baseUrl}/generate-text-quiz`, {
+        const response = await fetch(`/api/generate-text-quiz`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -193,7 +192,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
         formData.append('question_type', mapQuestionTypeToApi(settings.questionTypes));
         formData.append('difficulty', settings.difficulty);
 
-        const response = await fetch(`${baseUrl}/generate-file-quiz`, {
+        const response = await fetch(`/api/generate-file-quiz`, {
           method: 'POST',
           body: formData,
         });
