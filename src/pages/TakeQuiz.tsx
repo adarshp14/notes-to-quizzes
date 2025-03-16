@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -102,13 +101,17 @@ const TakeQuiz = () => {
           });
           
           if (options.length > 0) {
+            let correctIndex = 0; // Default to first option if we can't determine
             const letterPrefix = question.correct_letter || extractLetterPrefix(question.correct_answer);
-            let correctIndex = -1;
             
             if (letterPrefix) {
               correctIndex = letterPrefix.charCodeAt(0) - 65;
+              if (correctIndex < 0 || correctIndex >= options.length) {
+                console.warn(`Invalid letter index ${correctIndex} for Q${index+1}, defaulting to 0`);
+                correctIndex = 0;
+              }
               console.log(`Using letter prefix "${letterPrefix}" for correct index: ${correctIndex}`);
-            } else {
+            } else if (question.correct_answer) {
               const cleanedCorrectAnswer = question.clean_answer || cleanAnswerText(question.correct_answer);
               for (let i = 0; i < options.length; i++) {
                 if (cleanAnswerText(options[i]).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
@@ -119,11 +122,6 @@ const TakeQuiz = () => {
               console.log(`Using text matching for correct index: ${correctIndex}, Answer: "${cleanedCorrectAnswer}"`);
             }
             
-            if (correctIndex < 0 || correctIndex >= options.length) {
-              console.warn(`Invalid correctIndex (${correctIndex}) for question ${index + 1}, defaulting to 0`);
-              correctIndex = 0;
-            }
-            
             answers = options.map((option: string, idx: number) => {
               return {
                 id: `${index}-${idx}`,
@@ -132,10 +130,15 @@ const TakeQuiz = () => {
               };
             });
           } else if (question.correct_answer) {
-            console.warn(`No options for question ${index + 1}, creating single answer from correct_answer`);
             answers = [{
               id: `${index}-0`,
               text: cleanAnswerText(question.correct_answer),
+              isCorrect: true
+            }];
+          } else {
+            answers = [{
+              id: `${index}-fallback`,
+              text: "No answer options provided",
               isCorrect: true
             }];
           }
@@ -155,25 +158,25 @@ const TakeQuiz = () => {
           let answers = [];
           
           if (options.length > 0) {
+            let correctIndex = 0; // Default to first
             const cleanedCorrectAnswer = cleanAnswerText(question.correct_answer);
             
-            answers = options.map((option: string, idx: number) => {
-              const cleanedOption = cleanAnswerText(option);
-              return {
-                id: `${index}-${idx}`,
-                text: option,
-                isCorrect: cleanedOption === cleanedCorrectAnswer || option === question.correct_answer
-              };
-            });
-            
-            if (!answers.some(a => a.isCorrect) && cleanedCorrectAnswer) {
-              for (let i = 0; i < answers.length; i++) {
-                if (cleanAnswerText(answers[i].text).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
-                  answers[i].isCorrect = true;
+            if (cleanedCorrectAnswer) {
+              for (let i = 0; i < options.length; i++) {
+                if (cleanAnswerText(options[i]).toLowerCase() === cleanedCorrectAnswer.toLowerCase()) {
+                  correctIndex = i;
                   break;
                 }
               }
             }
+            
+            answers = options.map((option: string, idx: number) => {
+              return {
+                id: `${index}-${idx}`,
+                text: option,
+                isCorrect: idx === correctIndex
+              };
+            });
           } else if (question.correct_answer) {
             answers = [{
               id: `${index}-0`,
@@ -182,21 +185,11 @@ const TakeQuiz = () => {
             }];
           } else {
             answers = [{
-              id: `${index}-0`,
-              text: "No answer provided",
+              id: `${index}-default`,
+              text: "No answer options available",
               isCorrect: true
             }];
           }
-          
-          answers = answers.map((answer: any, aIdx: number) => {
-            if (!answer.id) {
-              return {
-                ...answer,
-                id: `${index}-${aIdx}`
-              };
-            }
-            return answer;
-          });
           
           return { 
             ...question, 
@@ -230,7 +223,6 @@ const TakeQuiz = () => {
         q.type !== 'matching' && q.type !== 'mixed'
       );
       
-      // Add thorough debug logs
       console.log("Processed questions:", filteredQuestions);
       filteredQuestions.forEach((q, i) => {
         console.log(`Question ${i+1} (${q.type}):`, q.text);

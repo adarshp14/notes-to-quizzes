@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -103,6 +102,42 @@ serve(async (req) => {
       if (question.question_type === "mixed" || question.question_type === "matching") {
         question.question_type = "multiple_choice";
       }
+      
+      // Ensure all questions have options array
+      if (!question.options || question.options.length === 0) {
+        console.warn(`Question ${index + 1} has no options, creating default options`);
+        
+        if (question.question_type === "multiple_choice") {
+          // For multiple choice, create 4 default options
+          const optionsCount = answerOptions || 4;
+          question.options = [];
+          for (let i = 0; i < optionsCount; i++) {
+            question.options.push(i === 0 ? 
+              `Correct answer for "${question.question}"` : 
+              `Incorrect option ${i} for "${question.question}"`
+            );
+          }
+          // Set first option as correct by default
+          question.correct_answer = `A) ${question.options[0]}`;
+          question.correct_letter = "A";
+          question.clean_answer = question.options[0];
+        } 
+        else if (question.question_type === "true_false") {
+          question.options = ["True", "False"];
+          // If no correct answer already set, default to True
+          if (!question.correct_answer) {
+            question.correct_answer = "True";
+          }
+        }
+        else if (question.question_type === "short_answer" || question.question_type === "fill_in_the_blank") {
+          // For short answer or fill in blank, use the correct answer as the option
+          const correctAnswer = question.correct_answer || `Default answer for "${question.question}"`;
+          question.options = [correctAnswer];
+          if (!question.correct_answer) {
+            question.correct_answer = correctAnswer;
+          }
+        }
+      }
     });
     
     return new Response(
@@ -186,6 +221,7 @@ function generateQuestions(
       const optionsArray = [];
       const correctIndex = Math.floor(Math.random() * options);
       
+      // Ensure we always create valid options
       for (let j = 0; j < options; j++) {
         if (j === correctIndex) {
           optionsArray.push(`Correct explanation of ${topic}`);
@@ -200,10 +236,10 @@ function generateQuestions(
       
       questions.push({
         question: questionText,
-        options: optionsArray,
+        options: optionsArray, // Always includes valid options
         correct_answer: correctAnswerWithPrefix,
-        correct_letter: letterPrefix, // Store the letter prefix for easier matching
-        clean_answer: optionsArray[correctIndex], // Store the clean answer without prefix
+        correct_letter: letterPrefix,
+        clean_answer: optionsArray[correctIndex],
         explanation: `This is an explanation about ${topic}.`,
         question_type: "multiple_choice",
         questionNumber: i + 1  // Add question number starting from 1
