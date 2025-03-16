@@ -56,6 +56,8 @@ const TakeQuiz = () => {
       setIsLoading(true);
       const receivedQuestions = location.state.questions as any[];
       
+      console.log("Original questions from API:", receivedQuestions);
+      
       const processedQuestions = receivedQuestions.map((question, index) => {
         let questionType: QuestionType = mapToQuestionType(question.question_type || question.type || '');
         
@@ -92,12 +94,20 @@ const TakeQuiz = () => {
           const options = question.options || [];
           let answers = [];
           
+          console.log(`Processing multiple-choice Q${index + 1}:`, {
+            options,
+            correctAnswer: question.correct_answer,
+            correctLetter: question.correct_letter,
+            cleanAnswer: question.clean_answer
+          });
+          
           if (options.length > 0) {
             const letterPrefix = question.correct_letter || extractLetterPrefix(question.correct_answer);
             let correctIndex = -1;
             
             if (letterPrefix) {
               correctIndex = letterPrefix.charCodeAt(0) - 65;
+              console.log(`Using letter prefix "${letterPrefix}" for correct index: ${correctIndex}`);
             } else {
               const cleanedCorrectAnswer = question.clean_answer || cleanAnswerText(question.correct_answer);
               for (let i = 0; i < options.length; i++) {
@@ -106,9 +116,11 @@ const TakeQuiz = () => {
                   break;
                 }
               }
+              console.log(`Using text matching for correct index: ${correctIndex}, Answer: "${cleanedCorrectAnswer}"`);
             }
             
             if (correctIndex < 0 || correctIndex >= options.length) {
+              console.warn(`Invalid correctIndex (${correctIndex}) for question ${index + 1}, defaulting to 0`);
               correctIndex = 0;
             }
             
@@ -120,12 +132,15 @@ const TakeQuiz = () => {
               };
             });
           } else if (question.correct_answer) {
+            console.warn(`No options for question ${index + 1}, creating single answer from correct_answer`);
             answers = [{
               id: `${index}-0`,
               text: cleanAnswerText(question.correct_answer),
               isCorrect: true
             }];
           }
+          
+          console.log(`Final answers for Q${index + 1}:`, answers);
           
           return { 
             id: question.id || `${index + 1}`,
@@ -215,11 +230,14 @@ const TakeQuiz = () => {
         q.type !== 'matching' && q.type !== 'mixed'
       );
       
-      // Add debug
+      // Add thorough debug logs
       console.log("Processed questions:", filteredQuestions);
       filteredQuestions.forEach((q, i) => {
         console.log(`Question ${i+1} (${q.type}):`, q.text);
         console.log(`Answers for Q${i+1}:`, q.answers);
+        if (!q.answers || q.answers.length === 0) {
+          console.error(`ERROR: No answers for question ${i+1}!`);
+        }
       });
       
       setQuestions(filteredQuestions);

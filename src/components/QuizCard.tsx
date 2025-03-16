@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Question, Answer, QuestionType } from '@/utils/quizUtils';
@@ -32,9 +31,19 @@ const QuizCard: React.FC<QuizCardProps> = ({
   onPrevious,
   showResults,
 }) => {
+  console.log("QuizCard props:", { 
+    question, 
+    questionNumber, 
+    totalQuestions, 
+    userAnswer,
+    questionType: question.type,
+    hasAnswers: !!question.answers,
+    answerCount: question.answers?.length || 0
+  });
+
   const [showExplanation, setShowExplanation] = useState(false);
   const [textAnswer, setTextAnswer] = useState('');
-  const correctAnswer = question.answers.find(a => a.isCorrect);
+  const correctAnswer = question.answers?.find(a => a.isCorrect);
   const isCorrect = userAnswer && correctAnswer?.id === userAnswer;
   
   useEffect(() => {
@@ -63,10 +72,8 @@ const QuizCard: React.FC<QuizCardProps> = ({
     return text;
   };
 
-  // Ensure true/false questions have both options
   const ensureTrueFalseOptions = () => {
     if (question.type === 'true-false') {
-      // Check if both true and false options exist
       const hasTrue = question.answers.some(a => a.text.toLowerCase() === 'true');
       const hasFalse = question.answers.some(a => a.text.toLowerCase() === 'false');
       
@@ -79,14 +86,18 @@ const QuizCard: React.FC<QuizCardProps> = ({
     return true;
   };
 
-  // This function renders different question types
   const renderQuestionContent = () => {
+    console.log(`Rendering question content for type: ${question.type}`);
+    console.log("Question answers:", question.answers);
+    
     switch (question.type) {
       case 'multiple-choice':
         return (
           <div className="space-y-4">
             {question.answers && question.answers.length > 0 ? (
-              question.answers.map((answer, index) => (
+              question.answers.map((answer, index) => {
+                console.log(`Rendering option ${index}:`, answer);
+                return (
                 <motion.div
                   key={answer.id}
                   initial={{ opacity: 0.8, y: 5 }}
@@ -123,17 +134,27 @@ const QuizCard: React.FC<QuizCardProps> = ({
                     )}
                   </div>
                 </motion.div>
-              ))
+              )})
             ) : (
               <div className="p-4 border rounded-lg border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700">
-                <p className="text-yellow-800 dark:text-yellow-200">No answer options available for this question.</p>
+                <div className="flex items-center">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 mr-2" />
+                  <p className="text-yellow-800 dark:text-yellow-200">
+                    No answer options available for this question. Debug info: {JSON.stringify({
+                      questionId: question.id,
+                      questionType: question.type,
+                      answersArray: question.answers,
+                      isAnswersNull: question.answers === null,
+                      isAnswersUndefined: question.answers === undefined
+                    })}
+                  </p>
+                </div>
               </div>
             )}
           </div>
         );
       
       case 'true-false':
-        // Create standard true/false options if they don't exist
         if (!ensureTrueFalseOptions()) {
           return (
             <div className="p-4 border rounded-lg dark:border-gray-700">
@@ -142,7 +163,6 @@ const QuizCard: React.FC<QuizCardProps> = ({
           );
         }
         
-        // Sort to ensure "True" is always first
         const sortedOptions = [...question.answers].sort((a, b) => {
           if (a.text.toLowerCase() === 'true') return -1;
           if (b.text.toLowerCase() === 'true') return 1;
