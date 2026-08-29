@@ -13,6 +13,7 @@ import {
   QuestionType
 } from '@/utils/quizUtils';
 import { QuizSettings } from './QuizCustomizer';
+import { processQuestions } from '@/utils/questionProcessing';
 
 interface QuizGeneratorProps {
   notes: string;
@@ -20,14 +21,6 @@ interface QuizGeneratorProps {
   settings: QuizSettings;
   onQuizGenerated: (questions: Question[]) => void;
   inputMethod: 'text' | 'upload';
-}
-
-interface ApiQuestion {
-  question: string;
-  options: string[] | null;
-  correct_answer: string;
-  explanation: string;
-  question_type: string;
 }
 
 const QuizGenerator: React.FC<QuizGeneratorProps> = ({
@@ -52,46 +45,6 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       case 'mixed': return 'mixed';
       default: return 'multiple_choice';
     }
-  };
-
-  const mapApiQuestionTypeToLocal = (type: string): QuestionType => {
-    switch(type) {
-      case 'multiple_choice': return 'multiple-choice';
-      case 'true_false': return 'true-false';
-      case 'fill_in_the_blank': return 'fill-in-the-blank';
-      case 'short_answer': return 'short-answer';
-      case 'matching': return 'matching';
-      case 'mixed': return 'mixed';
-      default: return 'multiple-choice';
-    }
-  };
-
-  const convertApiResponseToQuestions = (apiQuestions: ApiQuestion[]): Question[] => {
-    return apiQuestions.map((q, index) => {
-      const options = q.options || [];
-      
-      let answers = options.map((option, optIndex) => ({
-        id: `${index + 1}-${optIndex}`,
-        text: option,
-        isCorrect: option === q.correct_answer
-      }));
-      
-      if (answers.length === 0 && q.correct_answer) {
-        answers = [{
-          id: `${index + 1}-0`,
-          text: q.correct_answer,
-          isCorrect: true
-        }];
-      }
-
-      return {
-        id: `${index + 1}`,
-        text: q.question,
-        type: mapApiQuestionTypeToLocal(q.question_type),
-        answers: answers,
-        explanation: q.explanation
-      };
-    });
   };
 
   const handleGenerateFromNotes = async () => {
@@ -123,7 +76,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
       const data = await response.json();
       if (data.questions && Array.isArray(data.questions)) {
-        const questions = convertApiResponseToQuestions(data.questions);
+        const questions = processQuestions(data.questions);
         setCurrentQuiz(questions);
         onQuizGenerated(questions);
         toast.success(`Generated ${questions.length} questions from your notes!`);
@@ -178,7 +131,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
         const data = await response.json();
         if (data.questions) {
-          const questions = convertApiResponseToQuestions(data.questions);
+          const questions = processQuestions(data.questions);
           setCurrentQuiz(questions);
           onQuizGenerated(questions);
           toast.success(`Generated ${questions.length} questions from your text file!`);
@@ -204,7 +157,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({
 
         const data = await response.json();
         if (data.questions) {
-          const questions = convertApiResponseToQuestions(data.questions);
+          const questions = processQuestions(data.questions);
           setCurrentQuiz(questions);
           onQuizGenerated(questions);
           toast.success(`Generated ${questions.length} questions from your file!`);

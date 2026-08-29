@@ -20,15 +20,21 @@ export const mapToQuestionType = (typeStr: string): QuestionType => {
   }
 };
 
+// Both patterns require a real "a)" / "b." delimiter. Previously the delimiter
+// was optional, so a bare leading letter counted as a label: "Three NADH" was
+// served as "hree NADH", and an answer like "A mitochondrion" was read as the
+// label "A" and silently marked option 0 correct.
+const OPTION_LABEL = /^([a-z])[).]\s*/i;
+
 export const cleanAnswerText = (text: string): string => {
   if (!text) return '';
-  return text.replace(/^[a-z][\)\.]?\s*/i, '').trim();
+  return text.replace(OPTION_LABEL, '').trim();
 };
 
 export const extractLetterPrefix = (text: string): string | null => {
   if (!text) return null;
-  const match = text.match(/^([a-d])[.)\s]/i);
-  return match ? match[1].toUpperCase() : null;
+  const match = text.match(OPTION_LABEL);
+  return match && /^[a-d]$/i.test(match[1]) ? match[1].toUpperCase() : null;
 };
 
 export const processQuestions = (receivedQuestions: any[]): Question[] => {

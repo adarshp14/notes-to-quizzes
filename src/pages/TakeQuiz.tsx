@@ -9,7 +9,6 @@ import QuizLoading from '@/components/QuizLoading';
 import QuizEmpty from '@/components/QuizEmpty';
 import QuizHeader from '@/components/QuizHeader';
 import { Question, generateId } from '@/utils/quizUtils';
-import { processQuestions } from '@/utils/questionProcessing';
 import { toast } from 'sonner';
 
 const TakeQuiz = () => {
@@ -26,12 +25,12 @@ const TakeQuiz = () => {
   useEffect(() => {
     if (location.state?.questions) {
       setIsLoading(true);
-      const receivedQuestions = location.state.questions as any[];
-      
-      // Process the questions using our utility function
-      const processedQuestions = processQuestions(receivedQuestions);
+      // Already converted from the API shape by QuizGenerator. Converting a
+      // second time here read question.options off an object that only has
+      // answers, so every option fell back to the "Option A/B/C/D" placeholders.
+      const processedQuestions = location.state.questions as Question[];
       setQuestions(processedQuestions);
-      
+
       // Initialize user answers
       const initialAnswers: Record<string, string | null> = {};
       processedQuestions.forEach(q => {
